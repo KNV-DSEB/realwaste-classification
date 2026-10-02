@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data / checkpoints / large artifacts
+/data/
+*.pt
+*.pth
+*.ckpt
+*.zip
+
+# Local secrets
+.env
+kaggle.json
+
+# OS
+.DS_Store
+Thumbs.db

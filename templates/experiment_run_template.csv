@@ -1,0 +1,1 @@
+experiment_id,run_id,model_name,seed,batch_size,optimizer,learning_rate,epochs_planned,epochs_completed,augmentation,class_weighting,best_epoch,best_val_metric,checkpoint_path,training_time_minutes,git_commit,notes

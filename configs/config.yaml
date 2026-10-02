@@ -1,0 +1,34 @@
+project:
+  name: realwaste_classification
+  seed: 42
+  image_size: 224
+
+data:
+  train_ratio: 0.70
+  val_ratio: 0.15
+  test_ratio: 0.15
+  class_weighting: null  # decide only after dataset audit
+
+training:
+  batch_size: 32
+  epochs_simple: 30
+  epochs_complex: 40
+  epochs_transfer_head: 10
+  epochs_finetune: 15
+  early_stopping_patience: 5
+
+evaluation:
+  primary_metrics:
+    - accuracy
+    - macro_precision
+    - macro_recall
+    - macro_f1
+  save_predictions: true
+  save_confusion_matrix: true
+
+paths:
+  drive_root: "CHANGE_ME"
+  dataset_dir: "01_Dataset/RealWaste"
+  split_file: "02_Splits/split.csv"
+  checkpoint_dir: "03_Checkpoints"
+  result_dir: "04_Results"
