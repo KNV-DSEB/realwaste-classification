@@ -1,3 +1,5 @@
+# Colab preinstalls most of these. Versions are not pinned here; the exact versions of each
+# run are recorded in its config_snapshot via src.utils.environment_info().
 torch
 torchvision
 pandas
@@ -7,3 +9,4 @@ matplotlib
 Pillow
 PyYAML
 tqdm
+kagglehub

@@ -1,13 +1,18 @@
 # src
 
-Shared code goes here after Gate 1/2 approval.
+Shared code for every experiment. Notebooks import it from a clone of this repo
+(`sys.path.insert(0, REPO_DIR)`); do not copy pipeline code into notebooks.
 
-Planned modules:
-- `dataset.py` — read frozen split.csv and build datasets/dataloaders.
-- `transforms.py` — shared train vs validation/test transforms.
+Implemented:
+- `utils.py` — config loading, Drive paths, SHA256, seeds, environment record.
+- `transforms.py` — shared train (augmented) vs validation/test (deterministic) transforms.
+- `dataset.py` — SHA256-verified frozen split → `RealWasteDataset` → DataLoaders.
+  `get_dataloaders` returns train/val only; `get_test_loader` is for the final evaluation only.
+- `duplicate_check.py` — exact/near-duplicate detection used by `notebooks/03_duplicate_check.ipynb`.
+
+Planned:
 - `train.py` — common training loop/checkpoint logic.
 - `evaluate.py` — one common metrics implementation.
-- `utils.py` — seeds, paths, logging.
 - `models/simple_cnn.py`
 - `models/multiscale_cnn.py`
 - `models/efficientnet.py`

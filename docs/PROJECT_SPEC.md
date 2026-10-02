@@ -1,4 +1,6 @@
-# PROJECT_SPEC — LOCKED v1.0
+# PROJECT_SPEC — LOCKED v1.1
+
+v1.1 (2026-10-02): §6, §7, §8 (E2), §9 and §11 filled in from DECISION_LOG D007–D013. No change to models, split ratios, or metrics.
 
 ## 1. Title
 **Robust Real-World Waste Classification using Custom CNN Architectures and Transfer Learning**
@@ -31,23 +33,23 @@ Evaluate how CNN architectural complexity and transfer learning affect waste-cla
 - Split: stratified 70% train / 15% validation / 15% test.
 - Random seed: 42.
 - Split output: `split.csv` containing filepath, class label, and split assignment.
-- One fixed split reused by every core experiment.
+- One fixed split reused by every core experiment. Frozen 2026-10-02 with SHA256 fingerprints (D007); load it only through `src/dataset.py`.
 - Corrupt images are removed before split and documented.
-- Near-duplicate risk is inspected during audit; if material duplicates are found, resolve before freezing split.
+- Near-duplicate risk is inspected during audit; if material duplicates are found, resolve before freezing split. Check: `notebooks/03_duplicate_check.ipynb`.
 
 ## 7. Preprocessing
 Validation/Test:
 - RGB conversion
-- deterministic resize/crop to 224 × 224
-- normalization compatible with the model setup
+- deterministic resize to 224 × 224 (images are 524 × 524 squares, so no crop is needed)
+- normalization with ImageNet mean/std for every model (D008)
 
-Training augmentation (initial plan):
-- Random horizontal flip
-- Small random rotation
-- Random resized crop or resize + crop
-- Mild brightness/contrast/color jitter
+Training augmentation (D011; identical for E1–E3, disabled for E4):
+- RandomResizedCrop to 224, scale 0.8–1.0
+- Random horizontal flip (p = 0.5)
+- Small random rotation (±10°)
+- Mild brightness/contrast/saturation jitter (0.2 each, no hue shift)
 
-No random augmentation on validation/test.
+No random augmentation on validation/test. Exact values live in `configs/config.yaml`; the implementation is `src/transforms.py`.
 
 ## 8. Core models
 ### E1 — SimpleCNN
@@ -62,7 +64,7 @@ Custom model from scratch:
 Purpose: simple baseline required by assignment.
 
 ### E2 — MultiScaleCNN
-Custom complex CNN from scratch. Each multi-scale block contains parallel convolution branches with different receptive fields (e.g. 1×1, 3×3, 5×5), concatenated then normalized/activated. Use multiple blocks followed by global pooling and a classification head.
+Custom complex CNN from scratch. Each multi-scale block contains parallel convolution branches with different receptive fields (e.g. 1×1, 3×3, 5×5), concatenated then normalized/activated. Use multiple blocks with max-pooling downsampling between blocks, followed by global average pooling and a fully connected head (Dense → ReLU → Dropout → Dense(K)), so the model explicitly contains convolution, pooling and fully connected components (D013).
 
 Purpose: test whether multi-scale feature extraction improves real-world waste classification.
 
@@ -77,9 +79,9 @@ Purpose: assignment-required transfer learning/fine-tuning model.
 Repeat E2 without training augmentation, with all other settings held as close as possible.
 
 ## 9. Loss / imbalance handling
-Default loss: Cross-Entropy.
+Default loss: Cross-Entropy, unweighted, for all core models (D009).
 
-Class weighting is NOT automatically enabled. Decide after Dataset Audit. If imbalance is material, document the rationale and apply the same policy fairly where appropriate.
+The audit measured a moderate 2.90× imbalance (921 Plastic vs 318 Textile Trash). Class weighting is not enabled by default. It is introduced only if validation results show minority-class recall collapsing; if so, the same policy is applied to all core models and logged.
 
 ## 10. Metrics
 Required main metrics:
@@ -98,7 +100,7 @@ Secondary diagnostics:
 - Training time, if reliably measured
 
 ## 11. Model selection
-Use validation performance for model/checkpoint selection. Prefer Macro F1 as the primary selection metric if class imbalance is meaningful; otherwise Accuracy + Macro F1 are reported jointly.
+Use validation performance for model/checkpoint selection. Checkpoint selection and early stopping both use validation Macro F1 (mode max, patience 5) for all core models (D010). E3: Stage B starts from the best Stage-A checkpoint, and the final E3 checkpoint is the best validation Macro F1 over both stages. The test set is evaluated once per model, after selection.
 
 ## 12. Result table contract
 Every core experiment must produce:

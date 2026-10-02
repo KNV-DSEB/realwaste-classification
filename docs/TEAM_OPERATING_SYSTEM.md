@@ -46,12 +46,14 @@ Suggested shared Drive:
 Each experiment has its own checkpoint/result folder.
 
 ## Naming convention
-Checkpoints:
-- `E1_simplecnn_seed42_best.pt`
-- `E2_multiscale_seed42_best.pt`
-- `E3_effnetb0_seed42_best.pt`
+Defined in `RESULT_CONTRACT.md` (D012).
 
-Result files:
+Checkpoints:
+- `03_Checkpoints/E1/E1_best.pt`
+- `03_Checkpoints/E2/E2_best.pt`
+- `03_Checkpoints/E3/E3_best.pt`
+
+Result files (in `04_Results/experiments/E1/`):
 - `E1_metrics.json`
 - `E1_history.csv`
 - `E1_confusion_matrix.png`

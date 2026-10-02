@@ -14,11 +14,9 @@ Create one team folder:
 Subfolders:
 - `01_Dataset/RealWaste/`
 - `02_Splits/`
-- `03_Checkpoints/E1_simplecnn/`
-- `03_Checkpoints/E2_multiscale/`
-- `03_Checkpoints/E3_effnetb0/`
+- `03_Checkpoints/E1/`, `03_Checkpoints/E2/`, `03_Checkpoints/E3/` (`E4/` if run) — naming per D012
 - `04_Results/dataset_audit/`
-- `04_Results/experiments/`
+- `04_Results/experiments/E1/` … `E4/`
 - `05_Report/`
 - `06_Presentation/`
 

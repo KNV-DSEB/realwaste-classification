@@ -7,7 +7,30 @@ data:
   train_ratio: 0.70
   val_ratio: 0.15
   test_ratio: 0.15
-  class_weighting: null  # decide only after dataset audit
+  class_weighting: "none"  # D009: unweighted cross-entropy for all core models
+  num_workers: 2           # Colab exposes 2 vCPUs
+  pin_memory: true
+  normalization:           # D008: ImageNet statistics for every model (fixed constants, nothing fitted on data)
+    mean: [0.485, 0.456, 0.406]
+    std: [0.229, 0.224, 0.225]
+  augmentation:            # D011: training split only; identical for E1-E3, disabled for E4
+    random_resized_crop_scale: [0.8, 1.0]
+    horizontal_flip_p: 0.5
+    rotation_degrees: 10
+    color_jitter:
+      brightness: 0.2
+      contrast: 0.2
+      saturation: 0.2
+      hue: 0.0
+
+split:                     # D007: frozen artifacts; src/dataset.py refuses to run if these differ
+  split_sha256: "043e68e8028e402f2c2d04cdfa48e44b54c9ac6099981387f2859a0724aa4b1b"
+  class_mapping_sha256: "a99922d406b2a308ff6e85e0015dc675ad24be07f7e481ff4f0a1ed65a8aed8d"
+  num_classes: 9
+  expected_counts:
+    train: 3326
+    val: 713
+    test: 713
 
 training:
   batch_size: 32
@@ -15,6 +38,9 @@ training:
   epochs_complex: 40
   epochs_transfer_head: 10
   epochs_finetune: 15
+  selection_metric: val_macro_f1         # D010: checkpoint selection
+  early_stopping_monitor: val_macro_f1   # D010
+  early_stopping_mode: max
   early_stopping_patience: 5
 
 evaluation:
@@ -27,8 +53,16 @@ evaluation:
   save_confusion_matrix: true
 
 paths:
-  drive_root: "CHANGE_ME"
+  # Where the shared "Deep Learning - RealWaste" folder is mounted in this runtime.
+  # Change only this line if your mount path differs.
+  drive_root: "/content/drive/MyDrive/Deep Learning - RealWaste"
   dataset_dir: "01_Dataset/RealWaste"
+  # Optional absolute path to a local copy of the dataset (e.g. /content/RealWaste) for faster I/O.
+  dataset_root_override: null
   split_file: "02_Splits/split.csv"
+  class_mapping_file: "02_Splits/class_mapping.csv"
   checkpoint_dir: "03_Checkpoints"
   result_dir: "04_Results"
+  audit_dir: "04_Results/dataset_audit"
+  # Root under which split.csv `filepath` values were recorded at split time (D007). Never change.
+  recorded_dataset_root: "/content/drive/MyDrive/Deep Learning - RealWaste/01_Dataset/RealWaste"
