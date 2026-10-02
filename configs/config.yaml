@@ -23,15 +23,15 @@ data:
       saturation: 0.2
       hue: 0.0
 
-split:                     # D007: frozen artifacts; src/dataset.py refuses to run if these differ
-  split_sha256: "043e68e8028e402f2c2d04cdfa48e44b54c9ac6099981387f2859a0724aa4b1b"
+split:                     # D015/D016: frozen grouped split; src/dataset.py refuses to run if these differ
+  split_sha256: "65dc85e83acee56f5db0a0f3b9b5f08c84cf71d3d35c76f69c5213d4a33b3d3d"
   class_mapping_sha256: "a99922d406b2a308ff6e85e0015dc675ad24be07f7e481ff4f0a1ed65a8aed8d"
   num_classes: 9
   block_size: 10           # D015: grouped split, blocks of 10 consecutive file numbers per class
   expected_counts:
     train: 3326
-    val: 713
-    test: 713
+    val: 719
+    test: 707
 
 training:
   batch_size: 32
@@ -60,7 +60,7 @@ paths:
   dataset_dir: "01_Dataset/RealWaste"
   # Optional absolute path to a local copy of the dataset (e.g. /content/RealWaste) for faster I/O.
   dataset_root_override: null
-  split_file: "02_Splits/split.csv"
+  split_file: "02_Splits/split_grouped_v2.csv"   # D016 (D007 image-level split.csv kept as record)
   class_mapping_file: "02_Splits/class_mapping.csv"
   checkpoint_dir: "03_Checkpoints"
   result_dir: "04_Results"
