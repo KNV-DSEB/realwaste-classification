@@ -9,6 +9,7 @@ Implemented:
 - `dataset.py` — SHA256-verified frozen split → `RealWasteDataset` → DataLoaders.
   `get_dataloaders` returns train/val only; `get_test_loader` is for the final evaluation only.
 - `duplicate_check.py` — exact/near-duplicate detection used by `notebooks/03_duplicate_check.ipynb`.
+- `split.py` — grouped stratified split (blocks of consecutive file numbers) used by `notebooks/02b_grouped_split.ipynb` (D015).
 
 Planned:
 - `train.py` — common training loop/checkpoint logic.

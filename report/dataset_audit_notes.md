@@ -28,11 +28,14 @@ Largest Plastic 921, smallest Textile Trash 318; ratio 2.90 (moderate). Handled 
 - Team: add visually confusing class pairs and occlusion notes.
 
 ## Duplicate / near-duplicate risk
-Not checked by 01. Run `notebooks/03_duplicate_check.ipynb` and record here:
-- exact-duplicate groups (cross-split / cross-class):
-- near-duplicate candidates (dHash ≤ 20) across splits:
-- manual review of the closest val/test ↔ train pairs:
-- limitation: the same object photographed from a different angle cannot be detected by hashing.
+Checked by `notebooks/03_duplicate_check.ipynb` on the D007 split (DECISION_LOG D014):
+- exact duplicates (SHA256): 0 groups.
+- near duplicates (256-bit dHash ≤ 20): 1 pair, two Food Organics images both in train (d = 10).
+- nearest training image for each of the 1426 val/test images: distance 22–104 (median 80).
+- manual review of the 24 closest val/test ↔ train pairs: 1 near-identical photo (test Metal_216 ↔ train Metal_217, d = 22), 1 re-shot of the same milk carton (val Cardboard_142 ↔ train Cardboard_140, d = 43), 22 different objects on a similar background.
+- spot check of 32 random triplets of consecutive file numbers: 17/32 show the same item photographed again, usually 1–2 numbers apart (often moved or flipped, so hashing misses it); 4/32 had that item in train and in val/test.
+
+Conclusion: re-shots of the same item are systematic. The image-level split D007 is replaced by a split grouped into blocks of 10 consecutive file numbers per class (D015). Remaining limitation: re-shots that straddle a block boundary, or the same item photographed far apart in numbering, can still cross splits; `02b_grouped_split.ipynb` reports the first.
 
 ## Gate recommendation
-FIX BEFORE CONTINUING until the duplicate check is recorded in DECISION_LOG; then PASS or FIX according to that result.
+Gate 1 facts: PASS. Duplicate requirement: FIX — satisfied once the grouped split (D015) is generated and 03/04 pass on it.

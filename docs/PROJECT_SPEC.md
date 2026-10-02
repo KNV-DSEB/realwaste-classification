@@ -1,6 +1,7 @@
 # PROJECT_SPEC — LOCKED v1.1
 
 v1.1 (2026-10-02): §6, §7, §8 (E2), §9 and §11 filled in from DECISION_LOG D007–D013. No change to models, split ratios, or metrics.
+v1.2 (2026-10-03): §6 split grouped by consecutive file numbers (D014, D015). Ratios, seed, models and metrics unchanged.
 
 ## 1. Title
 **Robust Real-World Waste Classification using Custom CNN Architectures and Transfer Learning**
@@ -30,10 +31,10 @@ Evaluate how CNN architectural complexity and transfer learning affect waste-cla
 ## 6. Data protocol
 - Source: RealWaste Kaggle dataset selected by the team.
 - Image size: 224 × 224 RGB.
-- Split: stratified 70% train / 15% validation / 15% test.
+- Split: stratified 70% train / 15% validation / 15% test, grouped by blocks of 10 consecutive file numbers per class so that re-shots of the same item stay in one split (D015, replaces the image-level split D007 after the duplicate check D014).
 - Random seed: 42.
-- Split output: `split.csv` containing filepath, class label, and split assignment.
-- One fixed split reused by every core experiment. Frozen 2026-10-02 with SHA256 fingerprints (D007); load it only through `src/dataset.py`.
+- Split output: `split_grouped_v2.csv` containing filepath, class label, block, and split assignment.
+- One fixed split reused by every core experiment, pinned by SHA256 in `configs/config.yaml`; load it only through `src/dataset.py`.
 - Corrupt images are removed before split and documented.
 - Near-duplicate risk is inspected during audit; if material duplicates are found, resolve before freezing split. Check: `notebooks/03_duplicate_check.ipynb`.
 
