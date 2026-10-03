@@ -5,7 +5,7 @@ Status: DONE — frozen (D023). Selected checkpoint `E2_best.pt` = epoch 35.
 ## Runs
 | Run ID | Code | Epochs | Best epoch | Val accuracy | Val macro-F1 | Val macro P / R | Time | Notes |
 |---|---|---|---|---|---|---|---|---|
-| E2_20261003-161916 | `ec78be7` | 40 / 40 (cap; no gain in the last 5) | **35** | **0.787** | **0.787** | 0.815 / 0.772 | 42.4 min in total, including the cold first-epoch Drive read | T4 + AMP. Train loss keeps falling after ~epoch 30 (0.49 at epoch 40) while validation loss flattens (~0.63): mild overfitting at the end, handled by validation selection |
+| E2_20261003-161916 | `ec78be7`, outputs `5b26ae8` | 40 / 40 (cap; no gain in the last 5) | **35** | **0.787** | **0.787** | 0.815 / 0.772 | 42.4 min in total (epoch 1: 788 s cold Drive read; later ~45 s/epoch) | T4 + AMP; LR 1e-3 → 1.25e-4 by plateau steps at epochs 21, 31, 39. Train loss keeps falling after ~epoch 30 (0.49 at epoch 40) while validation loss flattens (~0.64): mild overfitting at the end, handled by validation selection |
 
 Validation observations at epoch 35 (719 images): correct 566. Recall: Vegetation 0.94, Metal 0.93, Food Organics 0.85, Paper 0.84, Plastic 0.75, Cardboard 0.71, Glass 0.70, Miscellaneous Trash 0.70, Textile Trash 0.51. Errors predicted as Plastic: 51 of 153 (33 %; E1: 54 %). Largest confusions: Plastic → Metal 23, Cardboard → Plastic 17, Glass → Plastic 14, Textile → Miscellaneous 13, Miscellaneous → Plastic 9.
 

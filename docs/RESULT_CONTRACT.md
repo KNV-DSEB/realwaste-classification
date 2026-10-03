@@ -16,11 +16,13 @@ Written by the training notebook (validation only):
 - `{EXPERIMENT_ID}_training_summary.json` — run record (EXPERIMENT_PROTOCOL "Training records")
 - E3 only: per-stage files `E3_stageA_best.pt`, `E3_stageA_last.pt`, `E3_stageB_best.pt`, `E3_stageB_last.pt`, `E3_stageA_history.csv`, `E3_stageB_history.csv`; `E3_best.pt` is a copy of the better stage-best checkpoint (D010, D022)
 
-Written once by the final-evaluation notebook (test set, D018):
+Written once by the final-evaluation notebook (test set, D018, D026):
 - `{EXPERIMENT_ID}_metrics.json`
 - `{EXPERIMENT_ID}_predictions.csv`
 - `{EXPERIMENT_ID}_per_class_metrics.csv`
 - `{EXPERIMENT_ID}_confusion_matrix.png`
+- `{EXPERIMENT_ID}_errors.csv` — misclassified test images with the `templates/error_analysis_template.csv` columns
+- `04_Results/final/model_comparison.csv`, `per_class_f1_comparison.csv`, `{primary}_test_error_examples.png`
 
 ## metrics.json fields
 Final test-set metrics of the validation-selected checkpoint.
@@ -42,6 +44,7 @@ Final test-set metrics of the validation-selected checkpoint.
 - class_mapping_sha256
 - config_snapshot — the full config plus `src.utils.environment_info()` (library versions, GPU, git commit)
 - notes
+- also written: `architecture`, `test_images`, `checkpoint_sha256` (guards against re-evaluating a changed checkpoint), `evaluated_at`
 
 ## history.csv fields
 One row per epoch: `epoch, train_loss, train_accuracy, val_loss, val_accuracy, val_macro_f1, lr, seconds`. E3 adds `stage` (`A` or `B`). Training loss/accuracy are running averages over augmented images with dropout active.

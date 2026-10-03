@@ -83,6 +83,10 @@ experiments:               # per-model settings that may differ (EXPERIMENT_PROT
     stage_b:               # starts from the best stage-A checkpoint (D010)
       trainable_blocks: 3  # features[6:] = the three 7×7 blocks, plus the head
       lr: 0.0001
+  E4:                      # D025, optional ablation: every E2 setting, with training augmentation disabled
+    based_on: E2
+    display_name: MultiScaleCNN_NoAug
+    augment: false
 
 evaluation:
   primary_metrics:

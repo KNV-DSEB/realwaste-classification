@@ -48,12 +48,15 @@ Multi-class real-world waste image classification.
 - **E2 final** (`E2_20261003-161916`, 40 epochs, no gain in the last 5): best epoch 35 — validation accuracy 0.787, macro-F1 0.787, macro precision 0.815, macro recall 0.772; mild overfitting after ~epoch 30 — **Gate 4 PASS, E2 frozen (D023)**
 - class-weighting re-check after E2: Textile recall 0.29 → 0.51, Miscellaneous 0.30 → 0.70, errors predicted as Plastic 54 % → 33 % → **keep unweighted CE (D024)**
 
+- E4 (optional ablation, D025) and the final test evaluation (`src/final_eval.py`, `notebooks/09_final_evaluation.ipynb`, D026) written and tested locally on synthetic data (full chain E1 → E2 → E3 → evaluation → E4 → evaluation, plus the evaluate-once and wrong-split guards)
+
 ## Current gate
-**Gate 5 — E3 EfficientNet-B0:** ready to train.
+**Gate 5 — E3 EfficientNet-B0:** ready to train. E4 ready to train.
 
 ## Next actions
-1. Run `notebooks/07_train_E3.ipynb`.
-2. Final test evaluation of E1–E3 once, in one notebook, after all models are selected (D018).
+1. Run `notebooks/07_train_E3.ipynb`, then `notebooks/08_train_E4.ipynb`.
+2. After E3 (and E4) are frozen: run `notebooks/09_final_evaluation.ipynb` once → result freeze in DECISION_LOG.
+3. Error analysis on the primary model's `{id}_errors.csv`; report and slides.
 
 ## Open unknowns
 - remaining same-object leakage at block boundaries: at most the 4.7 % / 9.4 % of neighbouring-number pairs that cross splits (most are different objects; 1 confirmed case in the 32-triplet spot check);

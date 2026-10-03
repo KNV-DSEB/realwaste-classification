@@ -12,6 +12,7 @@ Implemented:
 - `split.py` — grouped stratified split (blocks of consecutive file numbers) used by `notebooks/02b_grouped_split.ipynb` (D015).
 - `train.py` — shared training loop: validation-macro-F1 selection and early stopping, Drive checkpoints every epoch, resume after a disconnect, training curves.
 - `evaluate.py` — one metrics implementation (accuracy, macro P/R/F1, per-class, confusion matrix) for validation and the final test evaluation.
+- `final_eval.py` — evaluates each frozen checkpoint on the test split once and writes the RESULT_CONTRACT files and comparison tables (D026).
 - `models/simple_cnn.py` — E1.
 - `models/multiscale_cnn.py` — E2.
 - `models/efficientnet.py` — E3: ImageNet EfficientNet-B0 with a new head; `set_trainable_blocks(n)` freezes all but the last `n` feature blocks and keeps frozen BatchNorm layers in eval mode.
