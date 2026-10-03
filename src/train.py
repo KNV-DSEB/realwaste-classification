@@ -68,7 +68,9 @@ def fit(model, train_loader, val_loader, *, optimizer, criterion, device, num_cl
 
     Writes `{id}_best.pt` (best validation macro F1; ties keep the earlier epoch), `{id}_last.pt`
     (full state for resuming) and the history CSV after every epoch. If `{id}_last.pt` exists and
-    `resume` is True, training continues from it; a finished run is returned without retraining.
+    `resume` is True, training continues from it. A run that stopped early, or already reached
+    `max_epochs`, is returned without retraining; a run that ended at a lower epoch cap is extended
+    when `max_epochs` is raised (same run, optimizer and scheduler state).
     `run_info` (model name, run id, ...) is stored in both checkpoints; on resume the stored copy wins.
     """
     checkpoint_dir = Path(checkpoint_dir)
@@ -89,10 +91,11 @@ def fit(model, train_loader, val_loader, *, optimizer, criterion, device, num_cl
         history, best_f1, best_epoch = state["history"], state["best_val_macro_f1"], state["best_epoch"]
         stale, run_info = state["epochs_without_improvement"], state["run_info"]
         start_epoch = state["epoch"] + 1
-        if state["finished"]:
+        if stale >= patience or state["epoch"] >= max_epochs:
             print(f"{experiment_id} already finished at epoch {state['epoch']}; nothing to train.")
             return FitResult(pd.DataFrame(history), best_epoch, best_f1, stale >= patience, best_path, last_path, run_info)
-        print(f"Resuming {experiment_id} ({run_info['run_id']}) at epoch {start_epoch}")
+        action = "Extending" if state["finished"] else "Resuming"
+        print(f"{action} {experiment_id} ({run_info['run_id']}) at epoch {start_epoch}, max {max_epochs}")
 
     for epoch in range(start_epoch, max_epochs + 1):
         started = time.time()

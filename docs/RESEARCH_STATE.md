@@ -35,18 +35,20 @@ Multi-class real-world waste image classification.
 - pre-training audit; protocol decisions D006–D013 recorded
 - shared data pipeline written (`src/utils.py`, `src/transforms.py`, `src/dataset.py`)
 - duplicate check run on Colab and reviewed (D014); grouped split approved (D015) and generated (D016); config switched to it
-- pipeline smoke test (`04`, on the D007 config): all checks PASS; all 4752 images fully decode as RGB 524×524; ~0.8 min of data loading per training epoch from Drive (CPU runtime), so no local copy needed for now
+- pipeline smoke test (`04`, on the D007 config): all checks PASS; all 4752 images fully decode as RGB 524×524. Its "~0.8 min of data loading per epoch" was measured with a warm Drive cache (03 had just read every image); in a fresh Colab session the first epoch takes ~16 min (cold Drive reads, E1 epoch 1 = 945 s) and later epochs ~37 s
 - duplicate check re-run on the grouped split: 0 exact duplicates; closest val/test↔train dHash distance 29; the 24 closest pairs are different objects; 1 of 32 spot-check triplets still has a re-shot across a block boundary (was 4) — **Gate 2 PASS (D017)**
 
-- E1 code written (`src/models/simple_cnn.py`, `src/train.py`, `src/evaluate.py`, `notebooks/05_train_E1.ipynb`, D018) and tested locally on synthetic data (CPU, no AMP); not yet trained on the real data
+- E1 code written (`src/models/simple_cnn.py`, `src/train.py`, `src/evaluate.py`, `notebooks/05_train_E1.ipynb`, D018)
+- **E1 first run** (`E1_20261003-145155`, T4 GPU with AMP, 30 epochs, 33.5 min, commit `77b9c0f`). Validation only, best epoch 28: accuracy 0.652, macro-F1 0.643, macro precision 0.683, macro recall 0.639; 111,145 parameters. Train and validation curves stay close (no overfitting); still improving at the 30-epoch cap with LR already reduced to 1.25e-4 → extended to a 40-epoch cap (D019). Validation recall: Vegetation 0.97, Food Organics 0.82, Plastic 0.75, Cardboard 0.73, Paper 0.73, Metal 0.61, Glass 0.53, Miscellaneous Trash 0.33, Textile Trash 0.29; 113 of 250 errors are predictions of Plastic
 
 ## Current gate
-**Gate 3 — E1 SimpleCNN:** ready to train.
+**Gate 3 — E1 SimpleCNN:** first run done; extension to the 40-epoch cap pending.
 
 ## Next actions
-1. Run `notebooks/05_train_E1.ipynb` on a Colab T4 GPU; record the run from `E1_training_summary.json`.
+1. Re-run `notebooks/05_train_E1.ipynb` (Run all): it extends the same E1 run from epoch 30 to at most 40.
 2. E2 MultiScaleCNN, then E3 EfficientNet-B0, through the same pipeline.
-3. Final test evaluation of E1–E3 once, in one notebook, after all models are selected (D018).
+3. After E2: re-check whether minority/heterogeneous classes (Textile, Miscellaneous) still collapse into Plastic; only then consider changing D009 for all core models.
+4. Final test evaluation of E1–E3 once, in one notebook, after all models are selected (D018).
 
 ## Open unknowns
 - remaining same-object leakage at block boundaries: at most the 4.7 % / 9.4 % of neighbouring-number pairs that cross splits (most are different objects; 1 confirmed case in the 32-triplet spot check);

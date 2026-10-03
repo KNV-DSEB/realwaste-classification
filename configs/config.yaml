@@ -35,7 +35,7 @@ split:                     # D015/D016: frozen grouped split; src/dataset.py ref
 
 training:
   batch_size: 32
-  epochs_simple: 30
+  epochs_simple: 40        # D019: same cap as E2 (was 30)
   epochs_complex: 40
   epochs_transfer_head: 10
   epochs_finetune: 15
@@ -45,7 +45,7 @@ training:
   early_stopping_patience: 5
 
 experiments:               # per-model settings that may differ (EXPERIMENT_PROTOCOL); shared rules stay in `training`
-  E1:                      # D018; max epochs = training.epochs_simple
+  E1:                      # D018, D019; max epochs = training.epochs_simple
     model_name: SimpleCNN
     dropout: 0.3
     optimizer: adamw
