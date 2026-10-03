@@ -14,6 +14,7 @@ Written by the training notebook (validation only):
 - `{EXPERIMENT_ID}_curves.png` — training/validation loss and accuracy
 - `{EXPERIMENT_ID}_val_per_class_metrics.csv`, `{EXPERIMENT_ID}_val_confusion_matrix.png`
 - `{EXPERIMENT_ID}_training_summary.json` — run record (EXPERIMENT_PROTOCOL "Training records")
+- E3 only: per-stage files `E3_stageA_best.pt`, `E3_stageA_last.pt`, `E3_stageB_best.pt`, `E3_stageB_last.pt`, `E3_stageA_history.csv`, `E3_stageB_history.csv`; `E3_best.pt` is a copy of the better stage-best checkpoint (D010, D022)
 
 Written once by the final-evaluation notebook (test set, D018):
 - `{EXPERIMENT_ID}_metrics.json`

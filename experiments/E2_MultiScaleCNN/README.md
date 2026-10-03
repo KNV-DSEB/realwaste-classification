@@ -1,6 +1,15 @@
 # E2 — MultiScaleCNN
 
-Status: READY TO TRAIN (code tested locally on synthetic data; not yet run on the real data)
+Status: DONE — frozen (D023). Selected checkpoint `E2_best.pt` = epoch 35.
+
+## Runs
+| Run ID | Code | Epochs | Best epoch | Val accuracy | Val macro-F1 | Val macro P / R | Time | Notes |
+|---|---|---|---|---|---|---|---|---|
+| E2_20261003-161916 | `ec78be7` | 40 / 40 (cap; no gain in the last 5) | **35** | **0.787** | **0.787** | 0.815 / 0.772 | 42.4 min in total, including the cold first-epoch Drive read | T4 + AMP. Train loss keeps falling after ~epoch 30 (0.49 at epoch 40) while validation loss flattens (~0.63): mild overfitting at the end, handled by validation selection |
+
+Validation observations at epoch 35 (719 images): correct 566. Recall: Vegetation 0.94, Metal 0.93, Food Organics 0.85, Paper 0.84, Plastic 0.75, Cardboard 0.71, Glass 0.70, Miscellaneous Trash 0.70, Textile Trash 0.51. Errors predicted as Plastic: 51 of 153 (33 %; E1: 54 %). Largest confusions: Plastic → Metal 23, Cardboard → Plastic 17, Glass → Plastic 14, Textile → Miscellaneous 13, Miscellaneous → Plastic 9.
+
+Compared with E1 (validation, selected checkpoints): macro-F1 0.650 → 0.787 (+0.137), accuracy 0.656 → 0.787 (+0.131). Per the interpretation rule below, attribute this to the deeper, wider multi-scale model as a whole.
 
 ## Setup (DECISION_LOG D020)
 - Model: `src/models/multiscale_cnn.py`

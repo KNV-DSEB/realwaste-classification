@@ -14,9 +14,7 @@ Implemented:
 - `evaluate.py` — one metrics implementation (accuracy, macro P/R/F1, per-class, confusion matrix) for validation and the final test evaluation.
 - `models/simple_cnn.py` — E1.
 - `models/multiscale_cnn.py` — E2.
+- `models/efficientnet.py` — E3: ImageNet EfficientNet-B0 with a new head; `set_trainable_blocks(n)` freezes all but the last `n` feature blocks and keeps frozen BatchNorm layers in eval mode.
 - `models/__init__.py` — `build_model(model_name, **model_kwargs)`, used to rebuild any model from the `run_info` stored in its checkpoints.
-
-Planned:
-- `models/efficientnet.py`
 
 Do not duplicate the entire training/evaluation pipeline in each notebook.

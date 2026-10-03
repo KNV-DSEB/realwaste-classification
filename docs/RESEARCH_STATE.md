@@ -44,13 +44,16 @@ Multi-class real-world waste image classification.
 - **E1 final** (same run extended under D019, early-stopped at epoch 38): best epoch 33 — validation accuracy 0.656, macro-F1 0.650, macro precision 0.706, macro recall 0.636; 54 % of validation errors are predictions of Plastic; recall Textile 0.29, Miscellaneous 0.30 — **Gate 3 PASS, E1 frozen (D021)**
 - E2 code written (`src/models/multiscale_cnn.py`, `src/models/__init__.py` registry, `notebooks/06_train_E2.ipynb`, D020) and tested locally on synthetic data; not yet trained on the real data
 
+- E3 code written (`src/models/efficientnet.py`, `notebooks/07_train_E3.ipynb`, D022) and tested locally on synthetic data, including loading the ImageNet weights; not yet trained on the real data
+- **E2 final** (`E2_20261003-161916`, 40 epochs, no gain in the last 5): best epoch 35 — validation accuracy 0.787, macro-F1 0.787, macro precision 0.815, macro recall 0.772; mild overfitting after ~epoch 30 — **Gate 4 PASS, E2 frozen (D023)**
+- class-weighting re-check after E2: Textile recall 0.29 → 0.51, Miscellaneous 0.30 → 0.70, errors predicted as Plastic 54 % → 33 % → **keep unweighted CE (D024)**
+
 ## Current gate
-**Gate 4 — E2 MultiScaleCNN:** ready to train.
+**Gate 5 — E3 EfficientNet-B0:** ready to train.
 
 ## Next actions
-1. Run `notebooks/06_train_E2.ipynb`; then E3 EfficientNet-B0 through the same pipeline.
-2. After E2: re-check whether minority/heterogeneous classes (Textile, Miscellaneous) still collapse into Plastic; only then consider changing D009 for all core models (E1 would then be retrained, ~40 min).
-3. Final test evaluation of E1–E3 once, in one notebook, after all models are selected (D018).
+1. Run `notebooks/07_train_E3.ipynb`.
+2. Final test evaluation of E1–E3 once, in one notebook, after all models are selected (D018).
 
 ## Open unknowns
 - remaining same-object leakage at block boundaries: at most the 4.7 % / 9.4 % of neighbouring-number pairs that cross splits (most are different objects; 1 confirmed case in the 32-triplet spot check);
