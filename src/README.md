@@ -13,9 +13,10 @@ Implemented:
 - `train.py` — shared training loop: validation-macro-F1 selection and early stopping, Drive checkpoints every epoch, resume after a disconnect, training curves.
 - `evaluate.py` — one metrics implementation (accuracy, macro P/R/F1, per-class, confusion matrix) for validation and the final test evaluation.
 - `models/simple_cnn.py` — E1.
+- `models/multiscale_cnn.py` — E2.
+- `models/__init__.py` — `build_model(model_name, **model_kwargs)`, used to rebuild any model from the `run_info` stored in its checkpoints.
 
 Planned:
-- `models/multiscale_cnn.py`
 - `models/efficientnet.py`
 
 Do not duplicate the entire training/evaluation pipeline in each notebook.
