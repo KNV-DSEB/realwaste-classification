@@ -37,5 +37,7 @@ Checked by `notebooks/03_duplicate_check.ipynb` on the D007 split (DECISION_LOG 
 
 Conclusion: re-shots of the same item are systematic. The image-level split D007 is replaced by a split grouped into blocks of 10 consecutive file numbers per class (D015, generated as D016: train 3326 / val 719 / test 707). Same-class images 1 or 2 file numbers apart now fall into different splits in 4.7 % / 9.4 % of pairs, down from 46.7 % / 45.8 %, and all six same-object pairs found above now share a split. Remaining limitation: re-shots that straddle a block boundary, or the same item photographed far apart in numbering, can still cross splits.
 
+Re-check on the grouped split (D017): 0 exact duplicates; the closest val/test ↔ train dHash distance rose from 22 to 29; the 24 closest pairs are all different objects; in the same 32 spot-check triplets, re-shots crossing splits fell from 4 to 1 (Miscellaneous Trash 59 val ↔ 60 train, a heart ornament photographed front and back across a block boundary).
+
 ## Gate recommendation
-Gate 1: PASS (facts verified; duplicate risk handled by the grouped split). Gate 2: PASS once 03/04 pass on `split_grouped_v2.csv`.
+Gate 1: PASS (facts verified; duplicate risk handled by the grouped split). Gate 2: PASS on `split_grouped_v2.csv` (D017). Report the residual boundary leakage as a limitation.

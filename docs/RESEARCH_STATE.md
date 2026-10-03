@@ -36,16 +36,17 @@ Multi-class real-world waste image classification.
 - shared data pipeline written (`src/utils.py`, `src/transforms.py`, `src/dataset.py`)
 - duplicate check run on Colab and reviewed (D014); grouped split approved (D015) and generated (D016); config switched to it
 - pipeline smoke test (`04`, on the D007 config): all checks PASS; all 4752 images fully decode as RGB 524×524; ~0.8 min of data loading per training epoch from Drive (CPU runtime), so no local copy needed for now
+- duplicate check re-run on the grouped split: 0 exact duplicates; closest val/test↔train dHash distance 29; the 24 closest pairs are different objects; 1 of 32 spot-check triplets still has a re-shot across a block boundary (was 4) — **Gate 2 PASS (D017)**
 
 ## Current gate
-**Gate 2 — Split: grouped split frozen (D016); PASS once 03 and 04 pass on it.**
+**Gate 3 — E1 SimpleCNN** (next).
 
 ## Next actions
-1. Re-run `notebooks/03_duplicate_check.ipynb` and `notebooks/04_pipeline_smoke_test.ipynb` with the D016 config.
-2. Gate 3: implement and train E1 SimpleCNN through the shared pipeline.
+1. Implement shared training/evaluation code and E1 SimpleCNN; train E1 on Colab GPU with validation-only selection.
+2. E2 MultiScaleCNN, then E3 EfficientNet-B0, through the same pipeline.
 
 ## Open unknowns
-- remaining same-object leakage at block boundaries: at most the 4.7 % / 9.4 % of neighbouring-number pairs that cross splits (most are different objects);
+- remaining same-object leakage at block boundaries: at most the 4.7 % / 9.4 % of neighbouring-number pairs that cross splits (most are different objects; 1 confirmed case in the 32-triplet spot check);
 - same item photographed far apart in numbering (not covered by the spot check);
 - each member's Drive mount path (set `paths.drive_root` in `configs/config.yaml` if it differs).
 
