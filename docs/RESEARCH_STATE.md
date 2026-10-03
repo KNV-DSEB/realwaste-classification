@@ -41,16 +41,16 @@ Multi-class real-world waste image classification.
 - E1 code written (`src/models/simple_cnn.py`, `src/train.py`, `src/evaluate.py`, `notebooks/05_train_E1.ipynb`, D018)
 - **E1 first run** (`E1_20261003-145155`, T4 GPU with AMP, 30 epochs, 33.5 min, commit `77b9c0f`). Validation only, best epoch 28: accuracy 0.652, macro-F1 0.643, macro precision 0.683, macro recall 0.639; 111,145 parameters. Train and validation curves stay close (no overfitting); still improving at the 30-epoch cap with LR already reduced to 1.25e-4 → extended to a 40-epoch cap (D019). Validation recall: Vegetation 0.97, Food Organics 0.82, Plastic 0.75, Cardboard 0.73, Paper 0.73, Metal 0.61, Glass 0.53, Miscellaneous Trash 0.33, Textile Trash 0.29; 113 of 250 errors are predictions of Plastic
 
+- **E1 final** (same run extended under D019, early-stopped at epoch 38): best epoch 33 — validation accuracy 0.656, macro-F1 0.650, macro precision 0.706, macro recall 0.636; 54 % of validation errors are predictions of Plastic; recall Textile 0.29, Miscellaneous 0.30 — **Gate 3 PASS, E1 frozen (D021)**
 - E2 code written (`src/models/multiscale_cnn.py`, `src/models/__init__.py` registry, `notebooks/06_train_E2.ipynb`, D020) and tested locally on synthetic data; not yet trained on the real data
 
 ## Current gate
-**Gate 3 — E1 SimpleCNN:** first run done; extension to the 40-epoch cap pending. **Gate 4 — E2:** ready to train.
+**Gate 4 — E2 MultiScaleCNN:** ready to train.
 
 ## Next actions
-1. Re-run `notebooks/05_train_E1.ipynb` after Runtime → Restart session: it extends the same E1 run from epoch 30 to at most 40.
-2. Run `notebooks/06_train_E2.ipynb`; then E3 EfficientNet-B0 through the same pipeline.
-3. After E2: re-check whether minority/heterogeneous classes (Textile, Miscellaneous) still collapse into Plastic; only then consider changing D009 for all core models.
-4. Final test evaluation of E1–E3 once, in one notebook, after all models are selected (D018).
+1. Run `notebooks/06_train_E2.ipynb`; then E3 EfficientNet-B0 through the same pipeline.
+2. After E2: re-check whether minority/heterogeneous classes (Textile, Miscellaneous) still collapse into Plastic; only then consider changing D009 for all core models (E1 would then be retrained, ~40 min).
+3. Final test evaluation of E1–E3 once, in one notebook, after all models are selected (D018).
 
 ## Open unknowns
 - remaining same-object leakage at block boundaries: at most the 4.7 % / 9.4 % of neighbouring-number pairs that cross splits (most are different objects; 1 confirmed case in the 32-triplet spot check);

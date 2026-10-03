@@ -1,13 +1,16 @@
 # E1 — SimpleCNN
 
-Status: TRAINED to 30 epochs; extension to the 40-epoch cap pending (D019)
+Status: DONE — frozen (D021). Selected checkpoint `E1_best.pt` = epoch 33.
 
 ## Runs
-| Run ID | Commit | Epochs | Best epoch | Val accuracy | Val macro-F1 | Val macro P / R | Time | Notes |
+| Run ID | Code | Epochs | Best epoch | Val accuracy | Val macro-F1 | Val macro P / R | Time | Notes |
 |---|---|---|---|---|---|---|---|---|
-| E1_20261003-145155 | `df98d0a` (code), outputs `77b9c0f` | 30 / 30 (cap) | 28 | 0.652 | 0.643 | 0.683 / 0.639 | 33.5 min (epoch 1: 945 s cold Drive read) | T4 + AMP; LR 1e-3 → 1.25e-4 by plateau steps at epochs 8, 21, 26; no overfitting; still improving at the cap → extend to 40 |
+| E1_20261003-145155 (part 1) | `df98d0a`, outputs `77b9c0f` | 30 / 30 (cap) | 28 | 0.652 | 0.643 | 0.683 / 0.639 | 33.5 min (epoch 1: 945 s cold Drive read) | T4 + AMP; LR 1e-3 → 1.25e-4 by plateau steps at epochs 8, 21, 26; no overfitting; still improving at the cap → extended (D019) |
+| E1_20261003-145155 (extended) | `c785cb4` (`environment.git_commit` in the summary) | 38 / 40, early-stopped | **33** | **0.656** | **0.650** | 0.706 / 0.636 | 39.0 min in total, of which ~15.5 min is the cold first-epoch read; later epochs ~37–41 s | Train and validation curves stay together to the end (capacity-limited, no overfitting) |
 
-Validation observations (best epoch): Plastic acts as a sink (218 predicted, 105 correct; 113 of 250 errors); lowest recall Textile Trash 0.29 (→ Plastic 12, Paper 11, Metal 7) and Miscellaneous Trash 0.33 (→ Plastic 31); Glass → Plastic 20.
+Validation observations at epoch 33 (719 images): correct 472. Plastic acts as a sink: 249 images predicted Plastic, 116 correct, so 133 of 247 errors (54 %) are "→ Plastic". Recall: Vegetation 0.97, Plastic 0.83, Food Organics 0.80, Paper 0.70, Cardboard 0.69, Metal 0.60, Glass 0.55, Miscellaneous Trash 0.30, Textile Trash 0.29. Largest confusions: Metal → Plastic 34, Miscellaneous → Plastic 31, Glass → Plastic 25, Cardboard → Plastic 18, Textile → Plastic 13 / Paper 9 / Metal 7.
+
+For the report's training-time column, prefer time per epoch (~37–41 s on T4) over total minutes: the total includes a one-off ~15 min Drive read.
 
 ## Setup (DECISION_LOG D018)
 - Model: `src/models/simple_cnn.py` — 3 × [Conv3×3 (32/64/128) → BN → ReLU → MaxPool] → GAP → Dense(128) → ReLU → Dropout(0.3) → Dense(9).
