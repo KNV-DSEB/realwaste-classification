@@ -8,12 +8,18 @@ Every core experiment must create consistent outputs.
 - Result files: `04_Results/experiments/{EXPERIMENT_ID}/`
 
 ## Minimum files
-- `{EXPERIMENT_ID}_metrics.json`
+Written by the training notebook (validation only):
+- `{EXPERIMENT_ID}_best.pt`, `{EXPERIMENT_ID}_last.pt` (checkpoints)
 - `{EXPERIMENT_ID}_history.csv`
+- `{EXPERIMENT_ID}_curves.png` — training/validation loss and accuracy
+- `{EXPERIMENT_ID}_val_per_class_metrics.csv`, `{EXPERIMENT_ID}_val_confusion_matrix.png`
+- `{EXPERIMENT_ID}_training_summary.json` — run record (EXPERIMENT_PROTOCOL "Training records")
+
+Written once by the final-evaluation notebook (test set, D018):
+- `{EXPERIMENT_ID}_metrics.json`
 - `{EXPERIMENT_ID}_predictions.csv`
 - `{EXPERIMENT_ID}_per_class_metrics.csv`
 - `{EXPERIMENT_ID}_confusion_matrix.png`
-- `{EXPERIMENT_ID}_best.pt`
 
 ## metrics.json fields
 Final test-set metrics of the validation-selected checkpoint.
@@ -37,7 +43,7 @@ Final test-set metrics of the validation-selected checkpoint.
 - notes
 
 ## history.csv fields
-One row per epoch: `epoch, train_loss, train_accuracy, val_loss, val_accuracy, val_macro_f1`. E3 adds `stage` (`A` or `B`).
+One row per epoch: `epoch, train_loss, train_accuracy, val_loss, val_accuracy, val_macro_f1, lr, seconds`. E3 adds `stage` (`A` or `B`). Training loss/accuracy are running averages over augmented images with dropout active.
 
 ## per_class_metrics.csv fields
 Test set: `class_index, class_name, support, precision, recall, f1`.

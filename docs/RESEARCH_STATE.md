@@ -38,12 +38,15 @@ Multi-class real-world waste image classification.
 - pipeline smoke test (`04`, on the D007 config): all checks PASS; all 4752 images fully decode as RGB 524×524; ~0.8 min of data loading per training epoch from Drive (CPU runtime), so no local copy needed for now
 - duplicate check re-run on the grouped split: 0 exact duplicates; closest val/test↔train dHash distance 29; the 24 closest pairs are different objects; 1 of 32 spot-check triplets still has a re-shot across a block boundary (was 4) — **Gate 2 PASS (D017)**
 
+- E1 code written (`src/models/simple_cnn.py`, `src/train.py`, `src/evaluate.py`, `notebooks/05_train_E1.ipynb`, D018) and tested locally on synthetic data (CPU, no AMP); not yet trained on the real data
+
 ## Current gate
-**Gate 3 — E1 SimpleCNN** (next).
+**Gate 3 — E1 SimpleCNN:** ready to train.
 
 ## Next actions
-1. Implement shared training/evaluation code and E1 SimpleCNN; train E1 on Colab GPU with validation-only selection.
+1. Run `notebooks/05_train_E1.ipynb` on a Colab T4 GPU; record the run from `E1_training_summary.json`.
 2. E2 MultiScaleCNN, then E3 EfficientNet-B0, through the same pipeline.
+3. Final test evaluation of E1–E3 once, in one notebook, after all models are selected (D018).
 
 ## Open unknowns
 - remaining same-object leakage at block boundaries: at most the 4.7 % / 9.4 % of neighbouring-number pairs that cross splits (most are different objects; 1 confirmed case in the 32-triplet spot check);
