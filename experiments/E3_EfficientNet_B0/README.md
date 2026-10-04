@@ -1,6 +1,19 @@
 # E3 — EfficientNet-B0
 
-Status: READY TO TRAIN (code tested locally on synthetic data; not yet run on the real data)
+Status: DONE — frozen (D027). `E3_best.pt` = stage B, stage epoch 15 (global epoch 25).
+
+## Runs
+| Run ID | Code | Stage A (head) | Stage B (fine-tune) | Selected | Val accuracy | Val macro-F1 | Val macro P / R | Time |
+|---|---|---|---|---|---|---|---|---|
+| E3_20261003-171100 | `5b26ae8` | 10 / 10 epochs, best epoch 10, val macro-F1 0.810 | 15 / 15 epochs, best stage epoch 15, val macro-F1 0.879 | **B** (global epoch 25) | **0.880** | **0.879** | 0.894 / 0.871 | 26.5 min (stage A 16.5 incl. the cold first-epoch Drive read; stage B 10.1, ~40 s/epoch) |
+
+Training behaviour:
+- Neither stage early-stopped; both ended at their epoch cap. In stage B validation macro-F1 was flat over the last six epochs (about 0.868–0.879) while training accuracy approached 1.0 (training loss ~0.02 vs validation loss ~0.42): the fine-tuned network memorises the training set and further epochs would not help generalisation, so E3 was not extended (D027).
+- The bump in training loss/accuracy at the start of stage B (epoch 11) is expected: the newly unfrozen blocks switch their BatchNorm layers to batch statistics and their stochastic depth becomes active; validation metrics were not affected.
+
+Validation observations at the selected checkpoint (719 images): correct 633. Recall: Food Organics 0.97, Plastic 0.94, Vegetation 0.94, Paper 0.93, Metal 0.92, Cardboard 0.84, Textile Trash 0.82, Glass 0.77, Miscellaneous Trash 0.71. Largest confusions: Miscellaneous → Plastic 9, Glass → Plastic 8, Metal → Plastic 6, Cardboard → Metal 5, Miscellaneous → Metal 5. Errors predicted as Plastic: 27 of 86 (31 %).
+
+Compared on validation (selected checkpoints): macro-F1 E1 0.650 → E2 0.787 → E3 0.879; accuracy 0.656 → 0.787 → 0.880.
 
 ## Setup (DECISION_LOG D022)
 - Model: `src/models/efficientnet.py` — torchvision EfficientNet-B0 with ImageNet weights `IMAGENET1K_V1`; head replaced by Dropout(0.2) → Linear(1280 → 9); 4,019,077 parameters.
