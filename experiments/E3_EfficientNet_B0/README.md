@@ -5,7 +5,7 @@ Status: DONE — frozen (D027). `E3_best.pt` = stage B, stage epoch 15 (global e
 ## Runs
 | Run ID | Code | Stage A (head) | Stage B (fine-tune) | Selected | Val accuracy | Val macro-F1 | Val macro P / R | Time |
 |---|---|---|---|---|---|---|---|---|
-| E3_20261003-171100 | `5b26ae8` | 10 / 10 epochs, best epoch 10, val macro-F1 0.810 | 15 / 15 epochs, best stage epoch 15, val macro-F1 0.879 | **B** (global epoch 25) | **0.880** | **0.879** | 0.894 / 0.871 | 26.5 min (stage A 16.5 incl. the cold first-epoch Drive read; stage B 10.1, ~40 s/epoch) |
+| E3_20261003-171100 | `5b26ae8`, outputs `5e8b363` | 10 / 10 epochs, best epoch 10, val macro-F1 0.810 | 15 / 15 epochs, best stage epoch 15, val macro-F1 0.879 (stage epoch 10: 0.879 as well; LR 1e-4 → 5e-5 at stage epoch 14) | **B** (global epoch 25) | **0.880** | **0.879** | 0.894 / 0.871 | 26.5 min (stage A 16.5, of which epoch 1 = 639 s cold Drive read; stage B 10.1, ~40 s/epoch) |
 
 Training behaviour:
 - Neither stage early-stopped; both ended at their epoch cap. In stage B validation macro-F1 was flat over the last six epochs (about 0.868–0.879) while training accuracy approached 1.0 (training loss ~0.02 vs validation loss ~0.42): the fine-tuned network memorises the training set and further epochs would not help generalisation, so E3 was not extended (D027).

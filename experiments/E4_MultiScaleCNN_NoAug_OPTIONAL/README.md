@@ -1,6 +1,27 @@
 # E4 — MultiScaleCNN_NoAug (optional ablation)
 
-Status: READY TO TRAIN (code tested locally on synthetic data; not yet run on the real data)
+Status: DONE — frozen (D028). Selected checkpoint `E4_best.pt` = epoch 29.
+
+## Runs
+| Run ID | Code | Epochs | Best epoch | Val accuracy | Val macro-F1 | Val macro P / R | Time |
+|---|---|---|---|---|---|---|---|
+| E4_20261004-033943 | `5e8b363` | 34 / 40, early-stopped | **29** | **0.814** | **0.808** | 0.819 / 0.803 | 64.4 min in total (includes the cold first-epoch Drive read) |
+
+## Result vs E2 (validation, selected checkpoints)
+| | E2 (augmentation D011) | E4 (no augmentation) |
+|---|---|---|
+| Accuracy | 0.787 | 0.814 |
+| Macro-F1 | 0.787 | 0.808 |
+| Errors predicted as Plastic | 51 of 153 | 37 of 134 |
+| Final train / validation loss | ~0.49 / ~0.64 | ~0.22 / ~0.57 |
+
+Recall E2 → E4: Cardboard 0.71 → 0.80, Glass 0.70 → 0.78, Textile 0.51 → 0.59, Plastic 0.75 → 0.81, Paper 0.84 → 0.89, Vegetation 0.94 → 0.99, Miscellaneous 0.70 → 0.71, Food Organics 0.85 → 0.78, Metal 0.93 → 0.87.
+
+Reading (D028):
+- Without augmentation the network fits the training set much more closely (larger train–validation loss gap): augmentation does act as a regulariser.
+- That regularisation did not raise validation macro-F1 within the 40-epoch budget. E4 scored 0.021 higher, but this is one run per setting and smaller than the ±0.04 epoch-to-epoch validation noise, so the report must not claim that augmentation hurts or helps accuracy here.
+- Untested hypotheses for the discussion section: the images are already standardised (one top-down setup, centred objects), so geometric augmentation adds little that validation/test need; colour jitter may blur colour cues that separate materials (e.g. brown cardboard, green vegetation); augmented training usually needs more epochs than this budget.
+- E2, not E4, stays the core complex CNN: E1–E3 share one augmentation profile (CONSTITUTION C2), and switching after seeing this result would be post-hoc re-selection.
 
 ## Question (RQ4)
 What does training-time augmentation contribute? E4 repeats E2 with one factor changed.

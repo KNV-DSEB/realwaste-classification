@@ -53,13 +53,14 @@ Multi-class real-world waste image classification.
 - **E3 final** (`E3_20261003-171100`): stage A best 0.810 (epoch 10/10), stage B best 0.879 (epoch 15/15) → stage B selected; validation accuracy 0.880, macro-F1 0.879, macro precision 0.894, macro recall 0.871; training accuracy ~1.0 in stage B (memorisation), validation flat over the last six epochs — **Gate 5 PASS, E3 frozen (D027)**
 - Validation summary of the frozen core models (selected checkpoints): macro-F1 E1 0.650, E2 0.787, E3 0.879. These are validation numbers used for selection; the reported comparison comes from the single test evaluation.
 
+- **E4 final** (`E4_20261004-033943`, no augmentation, early-stopped at 34): best epoch 29 — validation accuracy 0.814, macro-F1 0.808 (E2 with augmentation: 0.787). Larger train–validation gap without augmentation; the macro-F1 difference is single-run and within validation noise — no claim either way; D011 and E1–E3 unchanged (D028)
+
 ## Current gate
-**Gate 6 — Code freeze:** E1–E3 complete. E4 (optional) ready to train.
+**Gate 6 — Code freeze:** E1–E4 complete and frozen. Next: the single final test evaluation (Gate 7, result freeze).
 
 ## Next actions
-1. Run `notebooks/08_train_E4.ipynb` (optional ablation).
-2. Then run `notebooks/09_final_evaluation.ipynb` once → result freeze in DECISION_LOG.
-3. Error analysis on the primary model's `{id}_errors.csv`; report and slides.
+1. Run `notebooks/09_final_evaluation.ipynb` once → result freeze in DECISION_LOG.
+2. Error analysis on the primary model's `{id}_errors.csv`; report and slides.
 
 ## Open unknowns
 - remaining same-object leakage at block boundaries: at most the 4.7 % / 9.4 % of neighbouring-number pairs that cross splits (most are different objects; 1 confirmed case in the 32-triplet spot check);
