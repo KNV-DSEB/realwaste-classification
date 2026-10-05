@@ -88,6 +88,18 @@ experiments:               # per-model settings that may differ (EXPERIMENT_PROT
     display_name: MultiScaleCNN_NoAug
     augment: false
 
+tuning:                    # D029: validation-only search; the same number of trials per core model and phase
+  base_seed: 42            # the existing run of each model is the trial "base" (seed 42)
+  phase1:                  # learning rate
+    E1: [{lr: 0.0003}, {lr: 0.003}]
+    E2: [{lr: 0.0003}, {lr: 0.003}]
+    E3: [{stage_b: {lr: 0.00003}}, {stage_b: {lr: 0.0003}}]
+  phase2:                  # on top of the phase-1 winner: regularisation (E1/E2), fine-tuning depth (E3)
+    E1: [{weight_decay: 0.01}, {weight_decay: 0.05}]
+    E2: [{weight_decay: 0.01}, {weight_decay: 0.05}]
+    E3: [{stage_b: {trainable_blocks: 2}}, {stage_b: {trainable_blocks: 9}}]
+  phase3_seeds: [43, 44]   # the overall phase-1/2 winner re-run with these seeds
+
 evaluation:
   primary_metrics:
     - accuracy

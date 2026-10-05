@@ -55,12 +55,15 @@ Multi-class real-world waste image classification.
 
 - **E4 final** (`E4_20261004-033943`, no augmentation, early-stopped at 34): best epoch 29 — validation accuracy 0.814, macro-F1 0.808 (E2 with augmentation: 0.787). Larger train–validation gap without augmentation; the macro-F1 difference is single-run and within validation noise — no claim either way; D011 and E1–E3 unchanged (D028)
 
+- Hyperparameter tuning decided (D029): three phases per core model (learning rate; weight decay / fine-tuning depth; seeds 43 and 44), validation-only, equal trial budget; `src/tuning.py` and `notebooks/10_tuning.ipynb` written and tested locally on synthetic data. The runs above remain as trial `base`.
+
 ## Current gate
-**Gate 6 — Code freeze:** E1–E4 complete and frozen. Next: the single final test evaluation (Gate 7, result freeze).
+**Tuning (D029)** before code freeze; then the single final test evaluation (Gate 7, result freeze).
 
 ## Next actions
-1. Run `notebooks/09_final_evaluation.ipynb` once → result freeze in DECISION_LOG.
-2. Error analysis on the primary model's `{id}_errors.csv`; report and slides.
+1. Run `notebooks/10_tuning.ipynb` once per core model (E1, E2, E3 — one person each, in parallel) until each has `selection.json`.
+2. Then run `notebooks/09_final_evaluation.ipynb` once → result freeze in DECISION_LOG.
+3. Error analysis on the primary model's `{id}_errors.csv`; report and slides.
 
 ## Open unknowns
 - remaining same-object leakage at block boundaries: at most the 4.7 % / 9.4 % of neighbouring-number pairs that cross splits (most are different objects; 1 confirmed case in the 32-triplet spot check);

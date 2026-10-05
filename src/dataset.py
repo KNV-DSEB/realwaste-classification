@@ -3,6 +3,8 @@
 Every experiment (E1-E4) must load data through this module so the split, class mapping,
 transforms and loader settings are identical (CONSTITUTION C2, EXPERIMENT_PROTOCOL).
 """
+import copy
+import shutil
 from pathlib import Path, PurePosixPath
 
 import pandas as pd
@@ -77,6 +79,25 @@ def load_frozen_split(cfg, check_files=True):
                 "Check paths.drive_root / paths.dataset_root_override in config.yaml."
             )
     return df
+
+
+def use_local_copy(cfg, local_root="/content/RealWaste_local"):
+    """Return a config whose images are read from a copy on the runtime's local disk.
+
+    The first read of the images from Drive is slow (~15 min); copying them once per Colab session lets
+    several trials share that cost. Split files are still read (and SHA256-checked) from Drive. An
+    interrupted copy is discarded and redone.
+    """
+    local = Path(local_root)
+    if not local.exists():
+        partial = local.with_name(local.name + "_partial")
+        shutil.rmtree(partial, ignore_errors=True)
+        print(f"Copying images from {get_paths(cfg).dataset_root} to {local} (once per session)...")
+        shutil.copytree(get_paths(cfg).dataset_root, partial)
+        partial.rename(local)
+    local_cfg = copy.deepcopy(cfg)
+    local_cfg["paths"]["dataset_root_override"] = str(local)
+    return local_cfg
 
 
 def verify_images_decode(frame, expected_size=None):
