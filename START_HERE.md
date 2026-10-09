@@ -1,5 +1,7 @@
 # RealWaste Deep Learning Project — Starter Pack v1.0
 
+> **Current state (2026-10-05):** E1–E4 are trained; seed runs 43/44 of E1–E3 (D030) are next, then the single test evaluation. **Read [`docs/HANDOVER.md`](docs/HANDOVER.md) first** — it lists what is done, what is left, who does what, and how to run it. The steps below describe the original setup.
+
 ## Purpose
 This pack is the operating system for a 10-day Deep Learning group project on RealWaste. It is designed to keep the team, ChatGPT, and Claude aligned around one fixed experimental protocol and the lecturer's required deliverables.
 

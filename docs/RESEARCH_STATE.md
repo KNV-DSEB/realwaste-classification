@@ -56,12 +56,13 @@ Multi-class real-world waste image classification.
 - **E4 final** (`E4_20261004-033943`, no augmentation, early-stopped at 34): best epoch 29 — validation accuracy 0.814, macro-F1 0.808 (E2 with augmentation: 0.787). Larger train–validation gap without augmentation; the macro-F1 difference is single-run and within validation noise — no claim either way; D011 and E1–E3 unchanged (D028)
 
 - Hyperparameter tuning decided (D029): three phases per core model (learning rate; weight decay / fine-tuning depth; seeds 43 and 44), validation-only, equal trial budget; `src/tuning.py` and `notebooks/10_tuning.ipynb` written and tested locally on synthetic data. The runs above remain as trial `base`.
+- **D030 (2026-10-09): the search is dropped for time.** Notebook 10 now only re-runs each core model's existing settings with seeds 43 and 44; the final evaluation reports mean ± SD over seeds 42/43/44.
 
 ## Current gate
-**Tuning (D029)** before code freeze; then the single final test evaluation (Gate 7, result freeze).
+**Seed runs (D030)** before code freeze; then the single final test evaluation (Gate 7, result freeze).
 
 ## Next actions
-1. Run `notebooks/10_tuning.ipynb` once per core model (E1, E2, E3 — one person each, in parallel) until each has `selection.json`.
+1. Run `notebooks/10_seed_runs.ipynb` once per core model (E1, E2, E3 — one person each, in parallel; seeds 43 and 44) until each has `selection.json`. Notebook 09 may run before it (seed 42 only) and again after it (D031).
 2. Then run `notebooks/09_final_evaluation.ipynb` once → result freeze in DECISION_LOG.
 3. Error analysis on the primary model's `{id}_errors.csv`; report and slides.
 

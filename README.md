@@ -11,7 +11,7 @@ Compare three CNN strategies under one fixed data/evaluation protocol:
 The project emphasizes fair comparison, reproducibility, class-level analysis, and a report structure aligned with the lecturer requirements.
 
 ## Start
-Read `START_HERE.md`.
+Joining now? Read [`docs/HANDOVER.md`](docs/HANDOVER.md) (current state, remaining work, how to run). The original setup is in `START_HERE.md`.
 
 ## Non-negotiables
 - One fixed split for all models.

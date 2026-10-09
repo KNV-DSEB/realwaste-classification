@@ -1,11 +1,5 @@
-"""Final test-set evaluation (CONSTITUTION C3, D018, D026, D029).
-
-For a tuned model the seed runs of its selected configuration (`selection.json`) are evaluated and
-summarised as mean ± SD; an untuned model (E4) is evaluated from its single run. Every checkpoint is
-evaluated on the test split once: re-running returns the stored result for the same checkpoint, a
-changed checkpoint raises (re-evaluating a retrained model needs a DECISION_LOG entry), and a checkpoint
-trained on another split is refused.
-"""
+"""Final evaluation on the test set (notebook 09). Each checkpoint is scored once; the result is stored
+and reused, and the run stops if a checkpoint was changed after it was evaluated."""
 import json
 from datetime import datetime
 
@@ -16,161 +10,90 @@ import torch
 from src.dataset import get_test_loader, load_class_mapping
 from src.evaluate import classification_metrics, per_class_metrics, plot_confusion_matrix, predict
 from src.models import build_model
-from src.tuning import BASE, summary_path, trial_dirs
-from src.utils import environment_info, get_paths, sha256_file
+from src.tuning import trial_dirs
+from src.utils import get_paths, sha256_file
 
-ERROR_COLUMNS = ["experiment_id", "filepath", "true_class", "predicted_class", "confidence",
-                 "failure_mode", "visual_note", "reviewer"]
 METRICS = ["accuracy", "macro_precision", "macro_recall", "macro_f1"]
 
 
-def experiment_dirs(cfg, experiment_id):
-    paths = get_paths(cfg)
-    return paths.checkpoint_dir / experiment_id, paths.result_dir / "experiments" / experiment_id
-
-
-def display_name(cfg, experiment_id, run_info):
-    return cfg["experiments"].get(experiment_id, {}).get("display_name", run_info["model_name"])
-
-
-def runs_to_evaluate(cfg, experiment_id):
-    """(seed, trial_id) pairs: the seed runs of the selected tuned configuration, or the single base run."""
-    _, result_dir = experiment_dirs(cfg, experiment_id)
-    selection_path = result_dir / "selection.json"
-    if selection_path.exists():
-        selection = json.loads(selection_path.read_text())
-        return [(int(seed), tid) for seed, tid in selection["seed_trials"].items()]
-    if experiment_id in cfg.get("tuning", {}).get("phase1", {}):
-        raise RuntimeError(f"{experiment_id} is in the tuning plan (D029) but has no selection.json; finish its tuning first.")
-    return [(cfg["project"]["seed"], BASE)]
-
-
-def evaluate_checkpoint(cfg, experiment_id, tid, out_dir, split_df, device, amp=False):
-    """Evaluate one trial's `{id}_best.pt` on the test split (once) and write its files into `out_dir`."""
-    checkpoint_dir, _ = trial_dirs(cfg, experiment_id, tid)
-    best_path = checkpoint_dir / f"{experiment_id}_best.pt"
-    metrics_path = out_dir / f"{experiment_id}_metrics.json"
-    checkpoint_sha256 = sha256_file(best_path)
-
-    if metrics_path.exists():
-        stored = json.loads(metrics_path.read_text())
-        if stored["checkpoint_sha256"] != checkpoint_sha256:
-            raise RuntimeError(
-                f"{experiment_id} {tid}: {best_path.name} changed after its test evaluation on {stored['evaluated_at']}. "
-                "Re-evaluating a changed model needs a DECISION_LOG entry; then move the old metrics file aside."
-            )
-        print(f"{experiment_id} {tid}: already evaluated on test ({stored['evaluated_at']}); using the stored result.")
+def evaluate_run(cfg, exp, tid, out_dir, split_df, device, amp=False):
+    ckpt_dir, res_dir = trial_dirs(cfg, exp, tid)
+    ckpt_path = ckpt_dir / f"{exp}_best.pt"
+    out_file = out_dir / f"{exp}_metrics.json"
+    sha = sha256_file(ckpt_path)
+    if out_file.exists():
+        stored = json.loads(out_file.read_text())
+        if stored["checkpoint_sha256"] != sha:
+            raise RuntimeError(f"{ckpt_path} changed after it was evaluated on the test set")
         return stored
 
-    checkpoint = torch.load(best_path, map_location=device)
-    run_info = checkpoint["run_info"]
-    if run_info["split_sha256"] != cfg["split"]["split_sha256"]:
-        raise ValueError(f"{experiment_id} {tid} was trained on split {run_info['split_sha256'][:12]}…, "
-                         f"not the frozen split {cfg['split']['split_sha256'][:12]}…")
-    class_names = load_class_mapping(cfg)["class_name"].tolist()
-    if run_info["class_names"] != class_names:
-        raise ValueError(f"{experiment_id} {tid}: class order in the checkpoint differs from class_mapping.csv")
-    summary = json.loads(summary_path(cfg, experiment_id, tid).read_text())
+    ckpt = torch.load(ckpt_path, map_location=device)
+    info = ckpt["run_info"]
+    if info["split_sha256"] != cfg["split"]["split_sha256"]:
+        raise ValueError(f"{ckpt_path} was trained on a different split")
+    classes = load_class_mapping(cfg)["class_name"].tolist()
+    model = build_model(info["model_name"], **info["model_kwargs"]).to(device)
+    model.load_state_dict(ckpt["model"])
+    p = predict(model, get_test_loader(cfg, split_df), device, amp=amp)
+    name = cfg["experiments"][exp].get("display_name", info["model_name"])
 
-    model = build_model(run_info["model_name"], **run_info["model_kwargs"]).to(device)
-    model.load_state_dict(checkpoint["model"])
-    preds = predict(model, get_test_loader(cfg, split_df), device, amp=amp)
-    metrics = classification_metrics(preds.y_true, preds.y_pred, len(class_names))
-    name = display_name(cfg, experiment_id, run_info)
-    seed = summary.get("seed", cfg["project"]["seed"])
-
-    predictions = pd.DataFrame({
-        "filepath": preds.filepaths,
-        "true_class": [class_names[i] for i in preds.y_true],
-        "predicted_class": [class_names[i] for i in preds.y_pred],
-        "confidence": preds.probs.max(axis=1).round(4),
-    })
-    predictions.to_csv(out_dir / f"{experiment_id}_predictions.csv", index=False)
-    errors = predictions[predictions["true_class"] != predictions["predicted_class"]]
-    errors.assign(experiment_id=experiment_id, failure_mode="", visual_note="", reviewer="")[ERROR_COLUMNS] \
-        .sort_values(["true_class", "predicted_class", "confidence"], ascending=[True, True, False]) \
-        .to_csv(out_dir / f"{experiment_id}_errors.csv", index=False)
-    per_class_metrics(preds.y_true, preds.y_pred, class_names) \
-        .to_csv(out_dir / f"{experiment_id}_per_class_metrics.csv", index=False)
-    fig = plot_confusion_matrix(preds.y_true, preds.y_pred, class_names,
-                                f"{experiment_id} {name} (seed {seed}) - test confusion matrix")
-    fig.savefig(out_dir / f"{experiment_id}_confusion_matrix.png", dpi=150, bbox_inches="tight")
+    preds = pd.DataFrame({"filepath": p.filepaths, "true_class": [classes[i] for i in p.y_true],
+                          "predicted_class": [classes[i] for i in p.y_pred], "confidence": p.probs.max(1).round(4)})
+    preds.to_csv(out_dir / f"{exp}_predictions.csv", index=False)
+    errors = preds[preds["true_class"] != preds["predicted_class"]].sort_values("confidence", ascending=False)
+    errors.assign(failure_mode="", visual_note="").to_csv(out_dir / f"{exp}_errors.csv", index=False)
+    per_class_metrics(p.y_true, p.y_pred, classes).to_csv(out_dir / f"{exp}_per_class_metrics.csv", index=False)
+    fig = plot_confusion_matrix(p.y_true, p.y_pred, classes, f"{exp} {name} - test")
+    fig.savefig(out_dir / f"{exp}_confusion_matrix.png", dpi=150, bbox_inches="tight")
     plt.close(fig)
 
-    result = {
-        "experiment_id": experiment_id,
-        "model_name": name,
-        "architecture": run_info["model_name"],
-        "trial_id": tid,
-        "seed": seed,
-        "eval_split": "test",
-        "test_images": len(predictions),
-        "selection_metric": summary["selection_metric"],
-        "best_val_macro_f1": summary["best_val_macro_f1"],
-        "best_epoch": summary["best_epoch"],
-        **metrics,
-        "parameter_count": summary["parameter_count"],
-        "training_time_minutes": summary["training_time_minutes"],
-        "checkpoint_path": str(best_path),
-        "checkpoint_sha256": checkpoint_sha256,
-        "split_sha256": cfg["split"]["split_sha256"],
-        "class_mapping_sha256": cfg["split"]["class_mapping_sha256"],
-        "evaluated_at": datetime.now().isoformat(timespec="seconds"),
-        "config_snapshot": {"config": cfg, "environment": environment_info(), "run_info": run_info},
-        "notes": "",
-    }
-    metrics_path.write_text(json.dumps(result, indent=2))
-    print(f"{experiment_id} {name} {tid} (seed {seed}): test accuracy {metrics['accuracy']:.4f}, macro-F1 {metrics['macro_f1']:.4f}")
+    summary = json.loads((res_dir / f"{exp}_training_summary.json").read_text())
+    result = {"experiment_id": exp, "model_name": name, "trial_id": tid,
+              "seed": summary.get("seed", cfg["project"]["seed"]), "eval_split": "test",
+              **classification_metrics(p.y_true, p.y_pred, len(classes)),
+              "best_val_macro_f1": summary["best_val_macro_f1"], "best_epoch": summary["best_epoch"],
+              "parameter_count": summary["parameter_count"], "checkpoint_sha256": sha,
+              "evaluated_at": datetime.now().isoformat(timespec="seconds")}
+    out_file.write_text(json.dumps(result, indent=2))
+    print(f"{exp} {tid}: test accuracy {result['accuracy']:.4f}, macro-F1 {result['macro_f1']:.4f}")
     return result
 
 
-def evaluate_experiment(cfg, experiment_id, split_df, device, amp=False):
-    """Evaluate every run of an experiment. The base-seed run is the primary one: its files go to
-    `04_Results/experiments/{id}/`, other seeds to `.../test_seeds/seed{n}/`."""
-    _, result_dir = experiment_dirs(cfg, experiment_id)
-    runs = []
-    for seed, tid in runs_to_evaluate(cfg, experiment_id):
-        out_dir = result_dir if seed == cfg["project"]["seed"] else result_dir / "test_seeds" / f"seed{seed}"
+def evaluate_experiment(cfg, exp, split_df, device, amp=False):
+    """All seed runs listed in selection.json (notebook 10); without it only the seed-42 run.
+    Stored results are reused, so running this again after notebook 10 only adds the new seeds."""
+    res_dir = trial_dirs(cfg, exp, "base")[1]
+    selection = res_dir / "selection.json"
+    if selection.exists():
+        runs = {int(s): t for s, t in json.loads(selection.read_text())["seed_trials"].items()}
+    else:
+        if exp in cfg["tuning"]["phase1"]:
+            print(f"{exp}: seeds 43/44 not run yet (notebook 10), evaluating seed 42 only")
+        runs = {cfg["project"]["seed"]: "base"}
+
+    results = []
+    for seed, tid in runs.items():
+        # seed 42 is the main run; other seeds go to their own folder
+        out_dir = res_dir if seed == cfg["project"]["seed"] else res_dir / "test_seeds" / f"seed{seed}"
         out_dir.mkdir(parents=True, exist_ok=True)
-        runs.append(evaluate_checkpoint(cfg, experiment_id, tid, out_dir, split_df, device, amp))
-    frame = pd.DataFrame(runs)
-    keys = METRICS + ["best_val_macro_f1"]
-    aggregate = {
-        "experiment_id": experiment_id,
-        "model_name": runs[0]["model_name"],
-        "trial_id": runs[0]["trial_id"],
-        "seeds": [int(r["seed"]) for r in runs],
-        "mean": {k: float(frame[k].mean()) for k in keys},
-        "sd": {k: (float(frame[k].std(ddof=1)) if len(runs) > 1 else None) for k in keys},
-        "parameter_count": runs[0]["parameter_count"],
-        "primary": runs[0],
-    }
-    if len(runs) > 1:
-        (result_dir / f"{experiment_id}_metrics_seeds.json").write_text(
-            json.dumps({**{k: v for k, v in aggregate.items() if k != "primary"},
-                        "per_seed": [{k: r[k] for k in ["seed", "trial_id"] + keys} for r in runs]}, indent=2))
-    return aggregate
+        results.append(evaluate_run(cfg, exp, tid, out_dir, split_df, device, amp))
+    return results
 
 
-def comparison_table(aggregates):
-    """Main report table (EXPERIMENT_PROTOCOL): test metrics as mean and SD over the evaluated seeds."""
+def comparison_table(results):
+    """Mean and SD over seeds for each experiment; results = {exp: [run results]}."""
     rows = []
-    for a in aggregates:
-        row = {"Experiment": a["experiment_id"], "Model": a["model_name"], "Trial": a["trial_id"], "Seeds": len(a["seeds"])}
-        for key, label in zip(METRICS, ["Accuracy", "Macro Precision", "Macro Recall", "Macro F1"]):
-            row[label] = round(a["mean"][key], 4)
-            row[f"{label} SD"] = None if a["sd"][key] is None else round(a["sd"][key], 4)
-        row["Val Macro F1"] = round(a["mean"]["best_val_macro_f1"], 4)
-        row["Parameters"] = a["parameter_count"]
+    for exp, runs in results.items():
+        df = pd.DataFrame(runs)
+        row = {"experiment": exp, "model": runs[0]["model_name"], "seeds": len(runs)}
+        for m in METRICS + ["best_val_macro_f1"]:
+            row[m] = round(df[m].mean(), 4)
+            row[m + "_sd"] = round(df[m].std(), 4) if len(runs) > 1 else None
         rows.append(row)
     return pd.DataFrame(rows)
 
 
-def per_class_f1_table(cfg, experiment_ids):
-    """Test F1 per class (rows) and experiment (columns), from each experiment's primary run."""
-    columns = {}
-    for experiment_id in experiment_ids:
-        _, result_dir = experiment_dirs(cfg, experiment_id)
-        per_class = pd.read_csv(result_dir / f"{experiment_id}_per_class_metrics.csv")
-        columns[experiment_id] = per_class.set_index("class_name")["f1"]
-    return pd.DataFrame(columns)
+def per_class_f1_table(cfg, experiments):
+    res = get_paths(cfg).result_dir / "experiments"
+    return pd.DataFrame({e: pd.read_csv(res / e / f"{e}_per_class_metrics.csv").set_index("class_name")["f1"]
+                         for e in experiments})

@@ -5,7 +5,7 @@ Status: DONE — frozen (D028). Selected checkpoint `E4_best.pt` = epoch 29.
 ## Runs
 | Run ID | Code | Epochs | Best epoch | Val accuracy | Val macro-F1 | Val macro P / R | Time |
 |---|---|---|---|---|---|---|---|
-| E4_20261004-033943 | `5e8b363` | 34 / 40, early-stopped | **29** | **0.814** | **0.808** | 0.819 / 0.803 | 64.4 min in total (includes the cold first-epoch Drive read) |
+| E4_20261004-033943 | `5e8b363`, outputs `6ab11ea` | 34 / 40, early-stopped | **29** | **0.814** | **0.808** | 0.819 / 0.803 | 64.4 min in total: the session was interrupted after epoch 27 and resumed at epoch 28, so the cold Drive read (~16–17 min) happened twice; later epochs ~33 s |
 
 ## Result vs E2 (validation, selected checkpoints)
 | | E2 (augmentation D011) | E4 (no augmentation) |
