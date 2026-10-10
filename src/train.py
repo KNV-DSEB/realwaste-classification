@@ -75,6 +75,9 @@ def fit(model, train_loader, val_loader, *, optimizer, criterion, device, num_cl
                "val_macro_f1": round(metrics["macro_f1"], 5), "lr": optimizer.param_groups[0]["lr"],
                "seconds": round(time.time() - t0, 1)}
         history.append(row)
+        # a folder created on the Drive mount can vanish during a long epoch, so recreate before writing
+        checkpoint_dir.mkdir(parents=True, exist_ok=True)
+        Path(history_path).parent.mkdir(parents=True, exist_ok=True)
 
         if row["val_macro_f1"] > best_f1:
             best_f1, best_epoch, stale = row["val_macro_f1"], epoch, 0

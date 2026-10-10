@@ -88,6 +88,7 @@ def run_trial(cfg, exp, overrides, seed, phase, split_df, device, amp):
                    "best_val_metrics": torch.load(r.best_path, map_location="cpu")["val_metrics"],
                    "stopped_early": r.stopped_early, "parameter_count": count_parameters(model),
                    "training_time_minutes": round(r.history["seconds"].sum() / 60, 1)}
+    res_dir.mkdir(parents=True, exist_ok=True)  # see train.fit: Drive folders can vanish mid-run
     summary_file.write_text(json.dumps({**info, **summary, "selection_metric": "val_macro_f1"}, indent=2))
     print(f"{exp} {tid}: validation macro-F1 {summary['best_val_macro_f1']:.4f}")
 
