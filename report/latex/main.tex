@@ -498,24 +498,67 @@ Macro precision and macro recall are averaged in the same way. Accuracy, the sha
 
 \subsection{2. Results on the Test Set}
 
-\todo{fill Table~\ref{tab:test} from the output of the submission notebook, then write the opening sentences of this subsection around the main result.}
+On the test set, the ranking found on validation is confirmed, and the gaps between the models are much larger than the variation between seeds. Table~\ref{tab:test} gives the mean and standard deviation over seeds 42, 43 and 44. E3 reaches a macro-F1 of 0.902, E2 reaches 0.798 and E1 reaches 0.666, and accuracy follows the same order (0.903, 0.796 and 0.676).
 
 \begin{table}[H]
 \centering
-\caption{Test set (707 images), mean $\pm$ SD over seeds 42, 43 and 44. Precision, recall and F1 are macro averages.}
+\caption{Test set (707 images), mean $\pm$ SD over seeds 42, 43 and 44 (SD: sample standard deviation of the three runs). Precision, recall and F1 are macro averages.}
 \label{tab:test}
+\setlength{\tabcolsep}{4pt}
 \begin{tabular}{lcccc}
 \toprule
 Model & Accuracy & Precision & Recall & F1-score \\
 \midrule
-E1 SimpleCNN & \tbd & \tbd & \tbd & \tbd \\
-E2 MultiScaleCNN & \tbd & \tbd & \tbd & \tbd \\
-E3 EfficientNet-B0 (fine-tuned) & \tbd & \tbd & \tbd & \tbd \\
+E1 SimpleCNN & $0.676 \pm 0.055$ & $0.678 \pm 0.053$ & $0.668 \pm 0.065$ & $0.666 \pm 0.062$ \\
+E2 MultiScaleCNN & $0.796 \pm 0.005$ & $0.798 \pm 0.011$ & $0.802 \pm 0.003$ & $0.798 \pm 0.006$ \\
+E3 EfficientNet-B0 & $0.903 \pm 0.002$ & $0.898 \pm 0.002$ & $0.908 \pm 0.005$ & $0.902 \pm 0.004$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\todo{per-class test F1 from the submission notebook, with one paragraph on the hardest classes.}
+The three seeds show how stable each model is. E2 and E3 hardly depend on the seed, with a standard deviation of 0.006 and 0.004 in macro-F1, whereas E1 does: its macro-F1 ranges from 0.595 to 0.705 (Table~\ref{tab:seeds}). We did not investigate why seed 43 stayed lower, but its validation score was also the lowest of the three (0.504). Even so, the models do not overlap. The best E1 run (0.705) lies below the worst E2 run (0.794), and the worst E3 run (0.898) lies above the best E2 run (0.805), so the order E1 < E2 < E3 does not rest on a single lucky run.
+
+\begin{table}[H]
+\centering
+\caption{Test macro-F1 of every run.}
+\label{tab:seeds}
+\begin{tabular}{lccc}
+\toprule
+Model & Seed 42 & Seed 43 & Seed 44 \\
+\midrule
+E1 SimpleCNN & 0.705 & 0.595 & 0.697 \\
+E2 MultiScaleCNN & 0.805 & 0.795 & 0.794 \\
+E3 EfficientNet-B0 & 0.898 & 0.905 & 0.903 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The test scores are higher than the validation scores for every model, for example 0.902 against 0.885 for E3 and 0.666 against 0.603 for E1 (means over the three seeds). Since we selected the checkpoints on the validation set, which should favour that set, this is not a sign that the test set was used during training. A more likely reason is that the two sets contain different objects and the validation images happen to be harder. We cannot rule out that residual overlap between training and test objects, discussed under the grouped split, adds a little to the test scores.
+
+The per-class scores in Table~\ref{tab:perclass} show where the gains come from. Miscellaneous Trash and Textile Trash are the hardest classes for all three models, and they are also where pretraining helps most. The F1 of Miscellaneous Trash rises from 0.331 (E1) to 0.614 (E2) and 0.797 (E3), and that of Textile Trash from 0.575 to 0.695 and 0.854. E2 beats E1 on all nine classes, and E3 beats E2 on eight of them. The exception is Vegetation, where E2 (0.978) is slightly ahead of E3 (0.948).
+
+\begin{table}[H]
+\centering
+\caption{Test F1 per class, seed-42 runs.}
+\label{tab:perclass}
+\begin{tabular}{lccc}
+\toprule
+Class & E1 & E2 & E3 \\
+\midrule
+Cardboard & 0.774 & 0.800 & 0.905 \\
+Food Organics & 0.867 & 0.878 & 0.915 \\
+Glass & 0.822 & 0.885 & 0.913 \\
+Metal & 0.721 & 0.798 & 0.915 \\
+Miscellaneous Trash & 0.331 & 0.614 & 0.797 \\
+Paper & 0.722 & 0.803 & 0.920 \\
+Plastic & 0.667 & 0.795 & 0.911 \\
+Textile Trash & 0.575 & 0.695 & 0.854 \\
+Vegetation & 0.868 & 0.978 & 0.948 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Figure~\ref{fig:cm} shows where the errors of each model fall.
 
 \begin{figure}[H]
 \centering
@@ -545,7 +588,7 @@ E3 EfficientNet-B0 & 25 of 25 & 0.880 & 0.894 & 0.871 & 0.879 \\
 \end{tabular}
 \end{table}
 
-\todo{add the validation macro-F1 mean $\pm$ SD of the three seeds from each \texttt{selection.json}.}
+Averaged over the three seeds, the validation macro-F1 is $0.603 \pm 0.086$ for E1, $0.759 \pm 0.026$ for E2 and $0.885 \pm 0.005$ for E3, so the same ranking holds. The seed-42 runs in Table~\ref{tab:val} are close to these averages, or a little above them in the case of E1 and E2.
 
 The training curves in Figure~\ref{fig:curves} help to explain this ranking, because each model behaved differently during training. E1 kept improving slowly until about epoch 33, and its training and validation curves stayed close together throughout; it was not overfitting but simply lacked capacity. E2 showed the opposite pattern towards the end. After roughly epoch 30 its training loss kept falling, to 0.49 at the end, while the validation loss stayed around 0.64. This mild overfit did no harm, since we keep the epoch with the best validation score anyway.
 
@@ -562,7 +605,13 @@ E3 gave the most telling result. With only the new head trained, stage A already
 
 \subsection{4. Error Analysis}
 
-On the validation set, every model tended to fall back on Plastic when it was unsure, and the smaller the model, the stronger this habit. E1 predicted Plastic for 249 validation images, of which only 116 really were Plastic, so 54\,\% of all its errors were wrong Plastic predictions. This share dropped to 33\,\% for E2 and 31\,\% for E3. Plastic is the largest class and covers almost every shape, colour and degree of shine, which probably makes it the safest guess for a model that has not yet learned the other classes well. Table~\ref{tab:conf} lists the most frequent confusions of each model.
+On the test set, our best model E3 makes 70 errors in 707 images, and they are spread thinly over many pairs of classes rather than concentrated in one. No single confusion accounts for more than 6 of the 70 errors. The largest groups are Miscellaneous Trash and Textile Trash taken together (12 errors, 6 in each direction), Metal and Plastic (9 errors) and Paper and Cardboard (8 errors). Miscellaneous Trash is the class with the most errors (18 of its 75 images, 24\,\%), followed by Plastic (14 of 132) and Metal (12 of 120). These counts come from the confusion matrices of the seed-42 runs in Figure~\ref{fig:cm}.
+
+The pairs that E3 confuses have a plausible common cause, although we have not tested it by examining the individual images. Paper and cardboard, and metal and plastic, can look alike in a photo taken from above. Miscellaneous Trash and Textile Trash, in turn, are the two classes that collect different objects instead of one material, so a few examples of one class can resemble the other.
+
+The weaker models fail in a different way, because each of them uses one class as a default answer when unsure. E1 makes 208 errors on the test set, and 72 of them (35\,\%) are images wrongly called Plastic, mostly Metal (29) and Miscellaneous Trash (22). E2 makes 141 errors and prefers Miscellaneous Trash instead: 47 of its errors (33\,\%) are images wrongly called Miscellaneous Trash, among them Plastic (15), Metal (12) and Textile Trash (12), while only 18 (13\,\%) are called Plastic. In E3, the shares of Miscellaneous Trash and Plastic are 16\,\% (11 of 70) and 13\,\% (9 of 70), so no single class acts as a default any more.
+
+The validation set showed a partly different picture, which suggests that the choice of the default class depends on the images in the set. Only the habit of E1 holds on both sets. On validation, every model tended to fall back on Plastic when it was unsure, and the smaller the model, the stronger this habit. E1 predicted Plastic for 249 validation images, of which only 116 really were Plastic, so 54\,\% of all its errors were wrong Plastic predictions. This share dropped to 33\,\% for E2 and 31\,\% for E3. Plastic is the largest class and covers almost every shape, colour and degree of shine, which probably makes it the safest guess for a model that has not yet learned the other classes well. Table~\ref{tab:conf} lists the most frequent confusions of each model.
 
 \begin{table}[H]
 \centering
@@ -581,24 +630,20 @@ E3 & Miscellaneous $\to$ Plastic 9, Glass $\to$ Plastic 8, Metal $\to$ Plastic 6
 
 The two classes that all models found hardest were Miscellaneous Trash and Textile Trash. E1 recognised only 30\,\% and 29\,\% of their images, E2 70\,\% and 51\,\%, and E3 71\,\% and 82\,\%. Both classes are collections of very different objects rather than one material, and Textile Trash is also the smallest class, so their low recall is not surprising.
 
-\todo{test error analysis: take the model with the best mean validation macro-F1, describe the failure modes of its misclassified test images grouped by confusion pair, and add a figure with example errors.}
-
 % ------------------------------------------------------------------ V
 \section{V. Conclusion}
 
-\todo{the findings below come from validation. Replace each number with the test mean $\pm$ SD and keep a finding only if the test results still support it.}
+The fine-tuned EfficientNet-B0 (E3) was clearly the best of the three models, and the gaps between them answer the three research questions. On the test set E3 reached a macro-F1 of $0.902 \pm 0.004$, compared with $0.798 \pm 0.006$ for our multi-scale CNN (E2) and $0.666 \pm 0.062$ for the simple CNN (E1).
 
-The fine-tuned EfficientNet-B0 (E3) was clearly the best of the three models, and the size of the gaps between them answers all three research questions. On the validation set E3 reached a macro-F1 of 0.879, compared with 0.787 for our multi-scale CNN (E2) and 0.650 for the simple CNN (E1).
+\textbf{RQ1.} A simple CNN trained from scratch is too small for this task, and it is also unstable. Its test macro-F1 of 0.666 varies strongly with the seed (0.595 to 0.705), and in the seed-42 run it is weakest on Miscellaneous Trash (F1 0.331) and Textile Trash (0.575). Because its curves show no overfitting, this points to a lack of capacity rather than a lack of data.
 
-\textbf{RQ1.} A simple CNN trained from scratch is too small for this task. It reaches a macro-F1 of 0.650 without overfitting, yet it misses most Textile Trash and Miscellaneous Trash items, which points to a lack of capacity rather than a lack of data.
+\textbf{RQ2.} The multi-scale CNN is a clear improvement over the simple one. It raises the test macro-F1 by 0.132 and improves all nine classes, most of all Miscellaneous Trash (0.331 to 0.614). Since E2 is also deeper and wider than E1, however, we credit this gain to the design as a whole rather than to the multi-scale branches alone.
 
-\textbf{RQ2.} The multi-scale CNN is a clear improvement over the simple one. It raises macro-F1 by 0.137 and recovers much of the two hard classes. Since E2 is also deeper and wider than E1, however, we credit this gain to the design as a whole rather than to the multi-scale branches alone.
+\textbf{RQ3.} ImageNet pretraining helps more than any architecture we designed ourselves. E3 adds 0.104 macro-F1 on top of E2, and its worst seed (0.898) is better than the best seed of E2 (0.805). Even the frozen pretrained features with only a new head reached a validation macro-F1 of 0.810 in the seed-42 run, more than either model trained from scratch (0.650 and 0.787).
 
-\textbf{RQ3.} ImageNet pretraining helps more than any architecture we designed ourselves. It adds about 0.09 macro-F1 on top of E2, and even the frozen pretrained features with only a new head (0.810) beat both models trained from scratch.
+The errors that remain are spread over many pairs of classes. On the test set, the best model E3 makes 70 mistakes in 707 images, most often between Miscellaneous Trash and Textile Trash, between Metal and Plastic, and between Paper and Cardboard. The simpler models also use one class as a default answer when unsure (Plastic for E1, Miscellaneous Trash for E2), a habit that largely disappears in E3.
 
-The errors that remain follow a common pattern across the models. They mostly confuse materials that look alike, such as glass, metal and plastic, or cardboard and plastic, they fall back on Plastic when unsure, and they struggle with the two mixed classes.
-
-These results come with several limitations. First, photos of one object can still end up in different subsets when they straddle a block boundary or are far apart in numbering, so the test scores may be slightly optimistic. Second, we did not search for better hyperparameters, and E1 in particular might do better with other settings. Third, the standard deviation over three seeds covers training randomness only, since all runs share one split. Our comparisons also change more than one factor at a time: E2 differs from E1 in several ways, and E3 differs from both in pretraining and schedule. Finally, all images come from one setup with the same floor and camera angle, so accuracy on photos taken elsewhere, for example on a real sorting line, is likely to be lower.
+These results come with several limitations. First, photos of one object can still end up in different subsets when they straddle a block boundary or are far apart in numbering, so the test scores may be slightly optimistic, and they are in fact higher than the validation scores for all three models. Second, we did not search for better hyperparameters, and E1 in particular might do better with other settings. Third, the standard deviation over three seeds covers training randomness only, since all runs share one split, and with only three runs it is itself a rough estimate, which matters most for E1. Our comparisons also change more than one factor at a time: E2 differs from E1 in several ways, and E3 differs from both in pretraining and schedule. Finally, all images come from one setup with the same floor and camera angle, so accuracy on photos taken elsewhere, for example on a real sorting line, is likely to be lower.
 
 For a practical sorting system with a small labelled dataset, our results favour starting from a pretrained network over designing a CNN from scratch. In our tests the pretrained model was the most accurate of the three and needed only 25 epochs to train. Before it could be used in the field, however, it would have to be retrained and tested on images from the place where it will run.
 
