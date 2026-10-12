@@ -97,52 +97,52 @@
 % ------------------------------------------------------------------ Part 1
 \section{Part 1: Theory}
 
-This part goes through the parts of a convolutional neural network that we actually used in the project. We follow the order of the course slides \cite{lec51, lec52, lec53} and, for each idea, point to the place where it shows up in our three models.
+This part explains the building blocks of a convolutional neural network (CNN) that our three models are made of. We follow the order of the course slides \cite{lec51, lec52, lec53}, and for each idea we point out where it appears in our own networks, so that the theory can be read together with the model design in Part~2.
 
 \subsection{1. Convolution, filters and feature maps}
 
-In a fully connected network every pixel would need its own weight, which is hopeless for a $224\times224$ colour image. A convolutional layer gets around this by sliding one small kernel, for example $3\times3$, over the whole image and taking a weighted sum at each position. Strictly speaking this is a cross-correlation, which is also how the lecture defines it \cite{lec51}. The same few weights are reused everywhere, so a kernel that has learned to respond to an edge will find that edge wherever it is.
+A convolutional layer extracts local patterns with small kernels that are shared across the whole image, which keeps the number of weights low. A fully connected layer, by contrast, would need one weight for every pixel and colour channel, far too many for a $224\times224$ colour image. The convolutional layer avoids this by sliding a single small kernel, for example $3\times3$, over the image and computing a weighted sum at each position; the lecture defines this operation as cross-correlation \cite{lec51}. Because the same weights are reused at every position, a kernel that has learned to respond to an edge finds that edge wherever it appears.
 
-Each kernel gives one output map, called a feature map. A layer with 64 kernels gives 64 feature maps, and the next layer mixes them into more complex patterns. With an input of size $n_h\times n_w$, a kernel of size $k_h\times k_w$, $p_h$ and $p_w$ rows and columns of padding and strides $s_h$ and $s_w$, the output height is
+Each kernel produces one feature map, and stacking layers lets the network build complex patterns out of simple ones. A layer with 64 kernels therefore outputs 64 feature maps, which the next layer combines into patterns such as corners or textures. The size of each map depends on the padding and the stride. For an input of height $n_h$, a kernel of height $k_h$, $p_h$ rows of padding and a stride of $s_h$, the output height is
 \begin{equation}
   \left\lfloor \frac{n_h - k_h + p_h + s_h}{s_h} \right\rfloor ,
 \end{equation}
-and the width follows the same formula \cite{lec51}. We always use stride 1 and $p_h = k_h - 1$, which keeps the height and width unchanged. In our networks only the pooling layers make the feature maps smaller.
+and the width follows the same formula \cite{lec51}. All our convolutions use stride 1 and $p_h = k_h - 1$, so they keep the height and width unchanged and leave the job of shrinking the maps to the pooling layers.
 
 \subsection{2. Activation functions}
 
-A stack of convolutions without anything in between is still a single linear map, so each convolution is followed by a non-linear activation. Our own models use ReLU, $f(x)=\max(0,x)$. It costs almost nothing and its gradient does not vanish for positive inputs. EfficientNet-B0 uses SiLU, $x\cdot\sigma(x)$, which is a smoother version of the same idea. At the very end, the network outputs one score $z_k$ per class, and softmax turns these scores into probabilities:
+Activation functions make the network non-linear; without them, a stack of convolutions would collapse into one linear map. Our own models use ReLU, $f(x)=\max(0,x)$, which is cheap to compute and keeps a non-zero gradient for every positive input, so the signal does not fade in deeper networks. EfficientNet-B0 uses SiLU, $x\cdot\sigma(x)$, a smoother version of the same idea. At the very end of the network, a different function is needed: the last layer outputs one raw score $z_k$ per class, and softmax turns these scores into probabilities that sum to one:
 \begin{equation}
   p_k = \frac{e^{z_k}}{\sum_{j=1}^{K} e^{z_j}} .
 \end{equation}
 
 \subsection{3. Pooling}
 
-Pooling layers sit between convolution blocks. Following the lecture, they make the network less sensitive to the exact position of a feature and they shrink the representation \cite{lec51}. We use $2\times2$ max pooling with stride 2, which keeps the largest value of every window and halves the height and width. In our simple CNN a $224\times224$ image is down to $28\times28$ after three poolings; in the multi-scale CNN it reaches $7\times7$ after five. After every pooling, each value of the next layer depends on a larger part of the input image (its receptive field), and this turns out to matter for our results.
+Pooling layers reduce the size of the feature maps and make the network less sensitive to small shifts of an object \cite{lec51}. We use $2\times2$ max pooling with stride 2, which keeps the largest value in each window and so halves the height and width. Repeated pooling also enlarges the receptive field, that is, the area of the input image on which one value depends. This turns out to matter for our task. In the simple CNN the input shrinks to $28\times28$ after three poolings, whereas the multi-scale CNN reaches $7\times7$ after five and can therefore relate much larger parts of each object.
 
 \subsection{4. Fully connected layers and global average pooling}
 
-The classic recipe flattens the last feature maps into one long vector and passes it to fully connected layers \cite{lec51}. For our multi-scale CNN that vector would have $7\times7\times256 = 12{,}544$ entries per image. We chose global average pooling (GAP) instead, which averages each feature map into one number and so leaves 256 values. GAP has no weights, which also means fewer things to overfit. After it comes a small dense head: Dense(128), ReLU, Dropout and Dense(9) in our own models, and only Dropout and Dense(9) in EfficientNet-B0.
+Fully connected layers turn the extracted features into class scores, and global average pooling lets them do so with far fewer inputs. In the classic design, the last feature maps are flattened into one long vector before the fully connected layers \cite{lec51}. For our multi-scale CNN this vector would hold $7\times7\times256 = 12{,}544$ values per image. Global average pooling (GAP) instead averages every feature map into a single number and leaves only 256 values. Since GAP has no weights of its own, it also lowers the risk of overfitting. The head that follows is small: Dense(128), ReLU, Dropout and Dense(9) in our own models, and only Dropout and Dense(9) in EfficientNet-B0.
 
 \subsection{5. Loss and optimisation}
 
-All models are trained with the cross-entropy loss over a batch of $N$ images with true classes $y_i$:
+All models are trained by minimising the cross-entropy loss with the AdamW optimiser. For a batch of $N$ images with true classes $y_i$, the loss is
 \begin{equation}
-  L = -\frac{1}{N}\sum_{i=1}^{N} \log p_{i,y_i} .
+  L = -\frac{1}{N}\sum_{i=1}^{N} \log p_{i,y_i} ,
 \end{equation}
-The gradients come from backpropagation and the update rule is AdamW \cite{adamw}. AdamW is Adam with weight decay applied directly to the weights instead of being mixed into the gradient. We start from a learning rate of $10^{-3}$ and halve it whenever the validation macro-F1 has not improved for two epochs. On the GPU we train in mixed precision (16-bit floats), which makes each epoch faster.
+which is small when the model gives a high probability to the correct class and grows quickly when it does not. Backpropagation computes the gradient of this loss for every weight, and AdamW \cite{adamw} uses these gradients to update the weights. AdamW differs from Adam in that it applies weight decay directly to the weights instead of adding it to the gradient. We start with a learning rate of $10^{-3}$ and halve it whenever the validation macro-F1 has not improved for two epochs. On the GPU we also train in mixed precision (16-bit floats), which makes each epoch faster.
 
 \subsection{6. Regularisation}
 
-The lecture on CNN techniques lists overly complex models and small or unrepresentative datasets among the main reasons for poor predictions \cite{lec53}. Our dataset is small (about 3,300 training images), so we use several regularisers at once. Batch normalisation \cite{batchnorm, lec52} follows every convolution and keeps activations on a similar scale, which mainly makes training more stable. Dropout \cite{dropout} switches off random neurons in the head (30\,\% in our models, 20\,\% in EfficientNet-B0). Weight decay of $10^{-4}$ pulls the weights towards zero. Finally, we stop training once the validation macro-F1 has not improved for 5 epochs and keep the best epoch.
+Because our training set is small, we combine several regularisation methods to stop the models from memorising it. The lecture lists overly complex models and small or unrepresentative datasets among the main causes of poor predictions \cite{lec53}, and with about 3,300 training images both risks apply to us. Batch normalisation \cite{batchnorm, lec52} follows every convolution and keeps the activations on a similar scale, which mainly makes training more stable. Dropout \cite{dropout} then switches off random neurons in the head during training (30\,\% in our models and 20\,\% in EfficientNet-B0), so that the head cannot rely on any single neuron. On top of these two layers, weight decay of $10^{-4}$ pulls the weights towards zero, and early stopping ends training once the validation macro-F1 has not improved for five epochs.
 
 \subsection{7. Data augmentation}
 
-Augmentation creates new training images on the fly by changing the existing ones at random, with the goal that the model never sees exactly the same image twice \cite{lec53}. We picked mild changes that still give a realistic photo: a crop of 80 to 100\,\% of the image that is resized back to $224\times224$, a horizontal flip, a rotation of at most $10^\circ$, and up to 20\,\% change in brightness, contrast and saturation. We left the hue unchanged, since colour is one of the cues that separate materials such as brown cardboard and grey metal. Validation and test images are only resized and normalised.
+Data augmentation enlarges the training set by changing each image at random every time it is used, so that the model rarely sees exactly the same picture twice \cite{lec53}. We chose mild changes that still produce realistic photos: a crop of 80 to 100\,\% of the image that is resized back to $224\times224$, a horizontal flip, a rotation of at most $10^\circ$, and a change of up to 20\,\% in brightness, contrast and saturation. The hue, however, stays unchanged, because colour is one of the cues that separate materials such as brown cardboard and grey metal. Validation and test images are only resized and normalised, so that their scores do not depend on chance.
 
 \subsection{8. Transfer learning and fine-tuning}
 
-Transfer learning reuses what a network has learned on a large dataset for a new task \cite{lec53}. The lecture splits this into a pretraining phase on a dataset such as ImageNet, a transfer phase in which the pretrained weights are either kept fixed (feature extraction) or partly retrained, and an optional fine-tuning phase on the small target dataset \cite{lec53}. Our third model follows this plan closely. We take EfficientNet-B0 pretrained on ImageNet-1K, which has 1,000 classes \cite{imagenet}, and first train only a new 9-class head on top of the frozen backbone. After that we unfreeze the last three blocks and continue with a learning rate ten times smaller, so the pretrained features are adjusted gently rather than overwritten.
+Transfer learning reuses the knowledge of a network trained on a large dataset for a new task \cite{lec53}. The lecture describes this in three phases: pretraining on a large dataset such as ImageNet, a transfer phase in which the pretrained weights are either kept fixed (feature extraction) or partly retrained, and an optional fine-tuning phase on the small target dataset \cite{lec53}. Our third model follows this plan closely. We take EfficientNet-B0 pretrained on ImageNet-1K, a dataset with 1,000 classes \cite{imagenet}, and first train only a new 9-class head on top of the frozen backbone. After that we unfreeze the last three blocks and continue with a learning rate ten times smaller, so that the pretrained features are adjusted gently rather than overwritten.
 
 % ------------------------------------------------------------------ Part 2
 \section{Part 2: Practical Application}
@@ -151,16 +151,15 @@ Transfer learning reuses what a network has learned on a large dataset for a new
 
 \begin{itemize}
   \item \textbf{Title:} \topic.
-  \item \textbf{Research objectives:} our goal is to see how much a more complex CNN and ImageNet pretraining help on real waste photos when everything else stays the same: the same split, the same preprocessing, the same training rules and the same metrics. We set four research questions:
+  \item \textbf{Research objectives:} we want to find out how much a more complex CNN and ImageNet pretraining improve the classification of real waste photos when everything else stays the same. To keep the comparison fair, all models share the same data split, preprocessing, training rules and metrics. Three research questions guide the work:
   \begin{enumerate}[label=RQ\arabic*., leftmargin=1.4cm]
     \item How well does a simple CNN trained from scratch classify RealWaste images?
     \item Does our own multi-scale CNN do better than the simple CNN under the same data protocol?
     \item How much does ImageNet transfer learning with EfficientNet-B0 add compared with CNNs trained from scratch?
-    \item (ablation) Does training-time augmentation help the multi-scale CNN?
   \end{enumerate}
   \item \textbf{Input of the problem:} one RGB photo of a single waste item, resized to $224\times224$ pixels.
   \item \textbf{Output of the problem:} the predicted class and the probability of each of the 9 classes.
-  \item \textbf{Summary of the tasks performed:} we started with an audit of the downloaded data (class counts, image format, broken files). The first train/validation/test split we made was a random one, but a duplicate check showed that the same object often appears in two or three consecutive photos, so we threw that split away before any training and replaced it with a grouped split. On top of this split we wrote one shared pipeline for loading, augmentation, training and evaluation, and trained the four models in Table~\ref{tab:models}. Each model was selected on validation macro-F1. Because one run can be lucky or unlucky, the three main models were trained twice more with different random seeds. At the end every selected model was evaluated once on the test set, and we looked at the images it got wrong.
+  \item \textbf{Summary of the tasks performed:} the project moved from checking the data, through building a split without leakage, to training and comparing three models. We first audited the downloaded dataset for class counts, image format and broken files. A look at repeated photos then showed that the same object often appears in two or three consecutive images, so we replaced our first, random split with a grouped one before any model was trained. On this split we built one shared pipeline for loading, augmentation, training and evaluation, and trained the three models in Table~\ref{tab:models}, each selected by its validation macro-F1. Since a single run can be lucky or unlucky, every model was trained three times with different random seeds. Finally, each selected model was evaluated once on the test set, and we examined the images it got wrong.
 \end{itemize}
 
 \begin{table}[H]
@@ -174,7 +173,6 @@ ID & Model & Trained from & Answers \\
 E1 & SimpleCNN (ours) & scratch & RQ1 \\
 E2 & MultiScaleCNN (ours) & scratch & RQ2 \\
 E3 & EfficientNet-B0 & ImageNet, fine-tuned & RQ3 \\
-E4 & MultiScaleCNN, no augmentation & scratch & RQ4 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -183,7 +181,7 @@ E4 & MultiScaleCNN, no augmentation & scratch & RQ4 \\
 
 \begin{itemize}
   \item \textbf{Download link:} RealWaste \cite{realwaste} is published in the UCI Machine Learning Repository (\url{https://archive.ics.uci.edu/dataset/908/realwaste}, licence CC BY 4.0). We downloaded it from the Kaggle mirror \url{https://www.kaggle.com/datasets/joebeachcapital/realwaste} (version 1).
-  \item \textbf{Description:} the dataset has 4,752 colour photos, each showing one waste item. The items belong to 9 material classes: Cardboard, Food Organics, Glass, Metal, Miscellaneous Trash, Paper, Plastic, Textile Trash and Vegetation. All images are RGB JPEG files of $524\times524$ pixels, and none of them was broken when we opened them. The classes are not balanced (Figure~\ref{fig:classes}). Plastic has 921 images while Textile Trash has only 318, almost three times fewer, so a model can look accurate overall while doing badly on the small classes. This is why we judge the models mainly by macro-averaged scores.
+  \item \textbf{Description:} RealWaste contains 4,752 colour photos, each showing a single waste item from one of 9 material classes: Cardboard, Food Organics, Glass, Metal, Miscellaneous Trash, Paper, Plastic, Textile Trash and Vegetation. Every image is an RGB JPEG of $524\times524$ pixels, and all of them opened without errors. The classes, however, are not balanced (Figure~\ref{fig:classes}): Plastic has 921 images while Textile Trash has only 318, almost three times fewer. A model could therefore reach a good overall accuracy while doing badly on the small classes, which is why we compare the models mainly by macro-averaged scores.
 \end{itemize}
 
 \begin{figure}[H]
@@ -208,7 +206,7 @@ E4 & MultiScaleCNN, no augmentation & scratch & RQ4 \\
 \label{fig:classes}
 \end{figure}
 
-When we looked through the images, the first thing we noticed was how uniform they are. Every photo shows one item from above on the same concrete floor, so the background tells the model nothing about the class. What does change is the lighting and colour cast: some photos are greyish, others clearly blue. A few items are hard even for a person. One ``Cardboard'' photo, for example, is printed food packaging that we would have labelled as Paper or Plastic. Figure~\ref{fig:samples} shows some examples.
+All photos were taken in the same setting, so the background gives the model no hint about the class. Each one shows a single item from above on the same concrete floor, which forces the model to rely on the object itself. What does vary is the lighting and the colour cast: some photos look grey, while others are clearly blue. A few items are hard to label even for a person; one Cardboard photo, for example, shows printed food packaging that we would have put under Paper or Plastic. Figure~\ref{fig:samples} shows three examples of each class.
 
 \begin{figure}[H]
 \centering
@@ -221,17 +219,17 @@ When we looked through the images, the first thing we noticed was how uniform th
 
 \subsection{1. Preprocessing}
 
-\subsubsection{Cleaning and duplicate check}
+\subsubsection{Cleaning and repeated photos}
 
-There was little to clean in the usual sense: all 4,752 files opened without errors and no two files were byte-for-byte identical. The problem we did find was less obvious. To look for near-duplicates we computed a 256-bit difference hash of every image, a fingerprint that changes little when a photo is re-saved or slightly edited, and inspected the most similar pairs. That turned up only one near-identical pair across subsets. We then also looked at 32 random groups of three images with consecutive file numbers, and in 17 of them the same object had simply been photographed again, usually moved or turned over. The hash had missed these because the photos really are different. Under our first, random split, 4 of those 32 objects had one photo in the training set and another in validation or test, which means the test score would partly reward memorising objects.
+The data needed no cleaning in the usual sense, but it did contain many repeated photos of the same object. All 4,752 files opened without errors and no two files were identical, so nothing had to be removed. The repeated photos only became visible when we looked at images with neighbouring file numbers. In 17 of 32 randomly chosen groups of three consecutive images, the same object had been photographed again, usually after it had been moved or turned over. Under our first, random split, 4 of these 32 objects had one photo in the training set and another in the validation or test set. A test score measured on such a split would partly reward the model for recognising objects it had already seen during training.
 
 \subsubsection{Grouped split}
 
-Since re-shots almost always have neighbouring file numbers, we split by groups of numbers instead of by single images. Within each class, the files are cut into blocks of ten consecutive numbers (Plastic\_640 to Plastic\_649 form one block). The blocks are shuffled with seed 42, and whole blocks go to the training, validation or test set in a 70/15/15 ratio per class. Table~\ref{tab:leak} shows how much this reduced the leakage, and Table~\ref{tab:split} gives the final sizes.
+To keep all photos of one object in the same subset, we split the data by blocks of file numbers instead of by single images. Re-shots almost always have neighbouring numbers, so within each class we cut the files into blocks of ten consecutive numbers; Plastic\_640 to Plastic\_649, for instance, form one block. These blocks are shuffled with seed 42, and whole blocks then go to the training, validation or test set in a 70/15/15 ratio per class. Table~\ref{tab:leak} shows how much this reduced the overlap between the subsets, and Table~\ref{tab:split} gives their final sizes.
 
 \begin{table}[H]
 \centering
-\caption{Leakage checks for the random image-level split we started with and for the grouped split we used.}
+\caption{Overlap between subsets under the random image-level split we started with and under the grouped split we used.}
 \label{tab:leak}
 \begin{tabularx}{\textwidth}{Xcc}
 \toprule
@@ -239,8 +237,7 @@ Check & Random split & Grouped split \\
 \midrule
 Same-class pairs 1 file number apart, in different subsets & 46.7\,\% & 4.7\,\% \\
 Same-class pairs 2 file numbers apart, in different subsets & 45.8\,\% & 9.4\,\% \\
-Smallest hash distance, val/test image to nearest train image & 22 & 29 \\
-Spot-check objects with photos in train and in val/test & 4 of 32 & 1 of 32 \\
+Checked objects with photos in train and in val/test & 4 of 32 & 1 of 32 \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -262,17 +259,19 @@ Total & 4,752 & 100\,\% & \\
 \end{tabular}
 \end{table}
 
-The split is not perfect. In the same 32 groups we still found one object, a heart-shaped ornament photographed front and back as Miscellaneous Trash 59 and 60, that falls on both sides of a block boundary. Re-shots that are far apart in numbering would also slip through. We come back to this in the limitations. To make sure every model saw exactly the same images, the split was saved once and its SHA-256 hash is checked each time it is loaded.
+The grouped split is not perfect, and we treat the remaining overlap as a limitation. Among the same 32 groups, one object still falls on both sides of a block boundary: a heart-shaped ornament photographed front and back as Miscellaneous Trash 59 and 60. Re-shots that are far apart in numbering would also slip through. To make sure that every model was trained and tested on exactly the same images, the split was saved once to a file that all models read, and our notebook generates the split again from its code and confirms that it matches this file.
 
 \subsubsection{Normalisation}
 
-Images are converted to RGB, scaled to $[0,1]$ and normalised per channel with the ImageNet mean $(0.485, 0.456, 0.406)$ and standard deviation $(0.229, 0.224, 0.225)$. EfficientNet-B0 expects exactly these values. We used them for the two models trained from scratch as well, so that the only difference between the models is the model itself. Because the values are fixed constants, nothing is estimated from our own data, including the test set.
+All images are normalised with the ImageNet statistics, which EfficientNet-B0 requires and which we apply to the other models as well. Each image is converted to RGB, scaled to $[0,1]$ and normalised per channel with the mean $(0.485, 0.456, 0.406)$ and the standard deviation $(0.229, 0.224, 0.225)$. Using the same values for the models trained from scratch means that the models differ only in the model itself, not in their input. Since these values are fixed constants, nothing is estimated from our own data, and no information from the test set can leak into training.
 
 \subsubsection{Augmentation (training set only)}
 
+Augmentation is applied only to the training set and is the same for all three models (Table~\ref{tab:aug}). Because the photos are square, validation and test images only need to be resized, and no cropping is required at evaluation time.
+
 \begin{table}[H]
 \centering
-\caption{Training augmentation, applied anew every epoch. Validation and test images are only resized to $224\times224$ and normalised.}
+\caption{Training augmentation, applied anew every epoch.}
 \label{tab:aug}
 \begin{tabular}{ll}
 \toprule
@@ -286,11 +285,9 @@ Colour jitter & brightness, contrast and saturation 0.2; hue unchanged \\
 \end{tabular}
 \end{table}
 
-The photos are square, so no cropping is needed at evaluation time. E1, E2 and E3 use the same augmentation. E4 uses none, since it exists only to measure what augmentation does.
-
 \subsection{2. Simple CNN (E1)}
 
-Our first model is meant as a baseline and is kept small on purpose. It has three convolution blocks, each made of a $3\times3$ convolution, batch normalisation, ReLU and $2\times2$ max pooling, followed by global average pooling and a small dense head (Figure~\ref{fig:e1}). The number of filters doubles from block to block (32, 64, 128) while the feature maps shrink from 224 to 28 pixels per side. In total the model has 111,145 parameters (Table~\ref{tab:e1}).
+E1 is a small baseline CNN with three convolution blocks and 111,145 parameters. Each block consists of a $3\times3$ convolution, batch normalisation, ReLU and $2\times2$ max pooling, and the number of filters doubles from block to block (32, 64, 128) while the feature maps shrink from 224 to 28 pixels per side. Global average pooling and a small dense head then turn these maps into the nine class scores (Figure~\ref{fig:e1}, Table~\ref{tab:e1}).
 
 \begin{figure}[H]
 \centering
@@ -333,11 +330,13 @@ Total & & 111,145 \\
 \end{tabular}
 \end{table}
 
-The convolutions have no bias, since the batch normalisation right after them already adds one. A useful way to see the limits of this design is the receptive field: after three blocks, one value of the last feature map depends on a patch of only $22\times22$ input pixels. That is enough to recognise a texture but not the outline of a bottle or a box, so E1 should have trouble with classes that are recognised by their shape.
+The shallow design of E1 makes it fast to train but limits what it can see. Its convolutions need no bias term, because the batch normalisation directly after them already adds its own shift. More importantly, after three blocks each value of the last feature map depends on only a $22\times22$ pixel patch of the input. Such a patch is enough to recognise a texture but not the outline of a bottle or a box, so E1 is likely to have trouble with classes that are recognised by their shape.
 
 \subsection{3. Complex CNN: MultiScaleCNN (E2)}
 
-For the complex model we started from a question raised in the lecture on modern CNNs: what is the right size for a convolution kernel? The lecture's answer, taken from GoogLeNet, is that combining several sizes can work better than picking one \cite{lec52, inception}. This fits our data. A crumpled plastic bag is recognised by fine wrinkles and reflections, which a small kernel picks up, while a cardboard box is recognised by large flat faces and straight edges. So each block of our network runs a $1\times1$, a $3\times3$ and a $5\times5$ convolution side by side on the same input and stacks their outputs (Figure~\ref{fig:msblock}). Half of the output channels go to the $3\times3$ branch and a quarter to each of the others. Compared with the Inception block in the lecture we left out the extra $1\times1$ reductions and the pooling branch to keep the model simple.
+E2 is our own complex CNN, built from blocks that look at the same input through three kernel sizes at once. The idea comes from a question raised in the lecture on modern CNNs, namely which kernel size is best. Following GoogLeNet, the lecture answers that combining several sizes can work better than choosing one \cite{lec52, inception}. This answer suits our data well. A crumpled plastic bag is recognised by fine wrinkles and reflections, which a small kernel picks up, whereas a cardboard box is recognised by large flat faces and straight edges, which need a wider view.
+
+Each multi-scale block therefore runs a $1\times1$, a $3\times3$ and a $5\times5$ convolution in parallel on the same input and stacks their outputs (Figure~\ref{fig:msblock}). Half of the output channels go to the $3\times3$ branch and a quarter to each of the other two. Compared with the Inception block in the lecture, we left out the extra $1\times1$ reductions and the pooling branch to keep the model simple.
 
 \begin{figure}[H]
 \centering
@@ -355,7 +354,7 @@ For the complex model we started from a question raised in the lecture on modern
 \label{fig:msblock}
 \end{figure}
 
-The full network (Figure~\ref{fig:e2}) starts with a single $3\times3$ convolution as a stem, then has four multi-scale blocks, each followed by max pooling, and ends with the same kind of head as E1. It has 1,230,377 parameters, about eleven times more than E1 (Table~\ref{tab:e2}).
+The full network stacks four such blocks between a convolutional stem and the same kind of head as E1 (Figure~\ref{fig:e2}). Every block is followed by max pooling, so the feature maps shrink from 112 to 7 pixels per side. With 1,230,377 parameters, E2 is about eleven times larger than E1 (Table~\ref{tab:e2}).
 
 \begin{figure}[H]
 \centering
@@ -398,11 +397,11 @@ Total & & 1,230,377 \\
 \end{tabular}
 \end{table}
 
-Through its $5\times5$ branches the last block of E2 sees a $154\times154$ pixel area of the input, against $22\times22$ for E1, so it can use the shape of the whole item. One caveat: E2 is not only multi-scale but also deeper and wider than E1. If E2 wins, we can only credit the design as a whole, not the multi-scale branches by themselves.
+The deeper design gives E2 a much wider view of each image than E1. Through its $5\times5$ branches, one value of the last block depends on a $154\times154$ pixel area of the input, compared with $22\times22$ in E1, so the network can make use of the shape of the whole item. At the same time, E2 differs from E1 in depth and width as well as in its multi-scale branches. If E2 performs better, the gain can therefore only be credited to the design as a whole, not to the multi-scale branches alone.
 
 \subsection{4. Transfer Learning and Fine-Tuning: EfficientNet-B0 (E3)}
 
-For transfer learning we chose EfficientNet-B0 \cite{efficientnet}, mainly because it is accurate for its size and trains quickly on the free Colab GPU we had. With its original 1,000-class head it has 5.3 million parameters and reaches 77.7\,\% top-1 accuracy on ImageNet-1K \cite{torchvision}. The network is built from MBConv blocks. Each block widens the channels with a $1\times1$ convolution, applies a cheap depthwise $3\times3$ or $5\times5$ convolution (one filter per channel), reweights the channels with a squeeze-and-excitation step and narrows them again with another $1\times1$ convolution. We removed the ImageNet head and put Dropout(0.2) and a $1280\to9$ dense layer in its place, which gives 4,019,077 parameters (Figure~\ref{fig:e3}).
+For transfer learning we chose EfficientNet-B0 \cite{efficientnet}, because it is accurate for its size and trains quickly on the free Colab GPU we had. With its original 1,000-class head the network has 5.3 million parameters and reaches 77.7\,\% top-1 accuracy on ImageNet-1K \cite{torchvision}. It is built from MBConv blocks, each of which widens the channels with a $1\times1$ convolution, applies a cheap depthwise $3\times3$ or $5\times5$ convolution with one filter per channel, reweights the channels with a squeeze-and-excitation step and narrows them again with another $1\times1$ convolution. We replaced the ImageNet head with Dropout(0.2) and a $1280\to9$ dense layer, which leaves 4,019,077 parameters (Figure~\ref{fig:e3}).
 
 \begin{figure}[H]
 \centering
@@ -431,7 +430,7 @@ For transfer learning we chose EfficientNet-B0 \cite{efficientnet}, mainly becau
 \label{fig:e3}
 \end{figure}
 
-Training happens in two stages that match the transfer and fine-tuning phases of the lecture \cite{lec53} (Table~\ref{tab:e3}). In stage A the whole backbone is frozen, including the running statistics of its batch normalisation layers, and only the new head learns. This is feature extraction: the backbone acts as a fixed feature generator and the head learns to read its 1,280 outputs. Stage B starts from the best stage-A checkpoint and also unfreezes the last three blocks, which hold the most task-specific features. We kept the first six blocks frozen because they detect generic edges and textures that should work for waste photos too, and because this keeps each epoch short. Whichever stage reaches the higher validation macro-F1 becomes the final E3 model.
+E3 is trained in two stages that match the transfer and fine-tuning phases of the lecture \cite{lec53} (Table~\ref{tab:e3}). In stage A the whole backbone is frozen, including the running statistics of its batch normalisation layers, and only the new head learns. The backbone thus acts as a fixed feature extractor, and the head learns to read its 1,280 outputs. Stage B starts from the best stage-A checkpoint and additionally unfreezes the last three blocks, which hold the most task-specific features. The first six blocks stay frozen, both because they detect generic edges and textures that also suit waste photos and because this keeps each epoch short. Whichever stage reaches the higher validation macro-F1 becomes the final E3 model.
 
 \begin{table}[H]
 \centering
@@ -450,11 +449,11 @@ Maximum epochs & 10 & 15 \\
 \end{tabularx}
 \end{table}
 
-E3 is different from E1 and E2 in its pretrained weights, its architecture and its training schedule. Comparing them therefore tells us how transfer learning does against training from scratch, not which architecture is better.
+Because E3 differs from E1 and E2 in its pretrained weights, its architecture and its training schedule, the comparison with them shows how transfer learning performs against training from scratch. It does not tell us which architecture is better.
 
 \subsection{5. Training Protocol}
 
-Table~\ref{tab:train} lists the training settings. We fixed them before training any model and used the same values for all models trained from scratch; E3 only differs where its two stages require it.
+All three models were trained under one protocol whose settings were fixed before training began (Table~\ref{tab:train}). The two models trained from scratch share exactly the same values, and E3 differs only where its two stages require it.
 
 \begin{table}[H]
 \centering
@@ -462,7 +461,7 @@ Table~\ref{tab:train} lists the training settings. We fixed them before training
 \label{tab:train}
 \begin{tabularx}{\textwidth}{lXX}
 \toprule
-Setting & E1, E2, E4 & E3 \\
+Setting & E1, E2 & E3 \\
 \midrule
 Loss & cross-entropy, no class weights & same \\
 Optimiser & AdamW, lr $10^{-3}$, weight decay $10^{-4}$ & AdamW, lr $10^{-3}$ (stage A) and $10^{-4}$ (stage B), weight decay $10^{-4}$ \\
@@ -476,34 +475,34 @@ Precision & mixed (16-bit) on GPU & same \\
 \end{tabularx}
 \end{table}
 
-A few of these choices came out of the project itself. We first gave E1 a limit of 30 epochs, but its validation score was still rising at epoch 30, so we raised the limit to 40 for both models trained from scratch and let the same run continue. We also considered weighting the loss by class frequency. We decided against it after E2 had been trained, because the deeper model already recovered most of the small classes on its own (validation recall for Textile Trash went from 29\,\% with E1 to 51\,\% with E2, and for Miscellaneous Trash from 30\,\% to 70\,\%).
+Two settings were decided during the project, both on the basis of validation results only. E1 was first given a limit of 30 epochs, but its validation score was still rising at that point, so we raised the limit to 40 for both models trained from scratch and let the same run continue. We also considered weighting the loss by class frequency to help the small classes. After E2 had been trained, this no longer seemed necessary, because the deeper model recovered most of the small classes on its own: the validation recall of Textile Trash rose from 29\,\% with E1 to 51\,\% with E2, and that of Miscellaneous Trash from 30\,\% to 70\,\%.
 
-We select models by validation macro-F1 rather than accuracy, both for early stopping and for picking the epoch to keep. With unequal classes, macro-F1 gives Textile Trash the same weight as Plastic.
+Model selection relies on the validation macro-F1 rather than on accuracy. Both early stopping and the choice of the epoch to keep use this score, because with unequal classes it gives Textile Trash the same weight as Plastic.
 
-We did not run a hyperparameter search. We had planned a small one (two learning rates and then two values of one more setting for each model), but it did not fit into the deadline. The values in Table~\ref{tab:train} are common defaults for AdamW and for fine-tuning. They may not be the best for every model, E1 in particular.
+We did not run a hyperparameter search, which is one of the limitations of this study. A small search, with two learning rates and two values of one further setting per model, was planned but did not fit into the deadline. The values in Table~\ref{tab:train} are therefore common defaults for AdamW and for fine-tuning, and they may not be the best choice for every model, E1 in particular.
 
-What we did instead was to repeat training. A single run depends on chance: the starting weights, the order of the batches, which augmentations are drawn and which neurons dropout switches off. So E1, E2 and E3 were each trained three times, with seeds 42, 43 and 44, and we report the mean and standard deviation (SD). The split stays the same in all runs, so the SD shows how much the result moves with training randomness, not with the choice of test images. E4 was trained once.
+Instead of a search, we repeated each training run to measure how much the results depend on chance. A single run is affected by the starting weights, the order of the batches, the augmentations that are drawn and the neurons that dropout switches off. Each model was therefore trained three times, with seeds 42, 43 and 44, and we report the mean and standard deviation (SD) of these runs. Since the split stays the same in all runs, the SD reflects training randomness only, not the choice of test images.
 
-All training ran on Google Colab with an NVIDIA T4 GPU, about 40 seconds per epoch for E1 and E3 and 45 seconds for E2. In practice the slowest part was reading the images from Google Drive: the first epoch of a new session took around 15 minutes, until we started copying the dataset to the Colab disk at the beginning of each session.
+All training ran on Google Colab with an NVIDIA T4 GPU, where one epoch took about 40 seconds for E1 and E3 and about 45 seconds for E2. In practice, the slowest step was reading the images from Google Drive. The first epoch of each session took around 15 minutes for this reason, until we started copying the dataset to the Colab disk at the beginning of every session.
 
 % ------------------------------------------------------------------ IV
 \section{IV. Experimental Results}
 
 \subsection{1. Metrics}
 
-We report accuracy and the macro averages of precision, recall and F1. For a class $k$, precision $P_k$ is the share of images predicted as $k$ that really belong to $k$, and recall $R_k$ is the share of the real $k$ images that the model found. F1 combines the two, and the macro average gives every class the same weight:
+We compare the models by accuracy and by the macro averages of precision, recall and F1, with macro-F1 as the main score. For a class $k$, precision $P_k$ is the share of images predicted as $k$ that really belong to $k$, and recall $R_k$ is the share of the real $k$ images that the model found. F1 combines the two, and the macro average gives every class the same weight:
 \begin{equation}
   F1_k = \frac{2\,P_k R_k}{P_k + R_k}, \qquad \text{Macro-F1} = \frac{1}{K}\sum_{k=1}^{K} F1_k .
 \end{equation}
-Macro precision and macro recall are averaged in the same way. Accuracy, the share of all images classified correctly, is easier to read but can hide a weak small class, which is why we use macro-F1 to compare models.
+Macro precision and macro recall are averaged in the same way. Accuracy, the share of all images classified correctly, is easier to read, but it can hide a weak small class; this is why macro-F1 decides the comparison.
 
 \subsection{2. Results on the Test Set}
 
-\todo{fill Table~\ref{tab:test} from \texttt{04\_Results/final/model\_comparison.csv} after notebook 09 has run with all three seeds, then delete this note.}
+\todo{fill Table~\ref{tab:test} from the output of the submission notebook, then write the opening sentences of this subsection around the main result.}
 
 \begin{table}[H]
 \centering
-\caption{Test set (707 images). E1 to E3: mean $\pm$ SD over seeds 42, 43 and 44. E4: one run. Precision, recall and F1 are macro averages.}
+\caption{Test set (707 images), mean $\pm$ SD over seeds 42, 43 and 44. Precision, recall and F1 are macro averages.}
 \label{tab:test}
 \begin{tabular}{lcccc}
 \toprule
@@ -512,26 +511,24 @@ Model & Accuracy & Precision & Recall & F1-score \\
 E1 SimpleCNN & \tbd & \tbd & \tbd & \tbd \\
 E2 MultiScaleCNN & \tbd & \tbd & \tbd & \tbd \\
 E3 EfficientNet-B0 (fine-tuned) & \tbd & \tbd & \tbd & \tbd \\
-E4 MultiScaleCNN, no augmentation & \tbd & \tbd & \tbd & \tbd \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\todo{per-class test F1 from \texttt{04\_Results/final/per\_class\_f1.csv}, one sentence on the hardest classes.}
+\todo{per-class test F1 from the submission notebook, with one paragraph on the hardest classes.}
 
 \begin{figure}[H]
 \centering
 \figfile{E1_confusion_matrix.png}{0.48\textwidth}{Drive: 04\_Results/experiments/E1/}\hfill
 \figfile{E2_confusion_matrix.png}{0.48\textwidth}{Drive: 04\_Results/experiments/E2/}\\[6pt]
-\figfile{E3_confusion_matrix.png}{0.48\textwidth}{Drive: 04\_Results/experiments/E3/}\hfill
-\figfile{E4_confusion_matrix.png}{0.48\textwidth}{Drive: 04\_Results/experiments/E4/}
+\figfile{E3_confusion_matrix.png}{0.48\textwidth}{Drive: 04\_Results/experiments/E3/}
 \caption{Test confusion matrices of the seed-42 runs (rows: true class, columns: predicted class).}
 \label{fig:cm}
 \end{figure}
 
 \subsection{3. Validation Results and Training Behaviour}
 
-Table~\ref{tab:val} shows the validation scores of the seed-42 runs, the scores we used to pick each checkpoint. On the 719 validation images the ranking was clear: E1 reached a macro-F1 of 0.650, E2 0.787 and E3 0.879, so each step up added roughly 0.1.
+On the validation set the three models rank clearly, with each step up adding roughly 0.1 macro-F1. Table~\ref{tab:val} shows the scores of the seed-42 runs, which we used to select the checkpoints: E1 reached a macro-F1 of 0.650, E2 0.787 and E3 0.879.
 
 \begin{table}[H]
 \centering
@@ -544,14 +541,15 @@ Model & Best epoch & Accuracy & Precision & Recall & F1-score \\
 E1 SimpleCNN & 33 of 38 & 0.656 & 0.706 & 0.636 & 0.650 \\
 E2 MultiScaleCNN & 35 of 40 & 0.787 & 0.815 & 0.772 & 0.787 \\
 E3 EfficientNet-B0 & 25 of 25 & 0.880 & 0.894 & 0.871 & 0.879 \\
-E4 no augmentation & 29 of 34 & 0.814 & 0.819 & 0.803 & 0.808 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \todo{add the validation macro-F1 mean $\pm$ SD of the three seeds from each \texttt{selection.json}.}
 
-The training curves (Figure~\ref{fig:curves}) explain part of this ranking. E1 kept improving slowly until about epoch 33, and its training and validation curves stayed close the whole time. It was not overfitting, it simply did not have enough capacity. E2 behaved differently: after roughly epoch 30 its training loss kept going down (0.49 at the end) while the validation loss stayed around 0.64, a mild overfit that is harmless because we keep the best validation epoch anyway. E3 was the most interesting case. With only the head trained, stage A already reached 0.810, better than our best model trained from scratch. Fine-tuning in stage B raised this to 0.879, but by the end of stage B the training accuracy was close to 100\,\% (training loss 0.02 against 0.42 on validation), so we saw no point in training it longer.
+The training curves in Figure~\ref{fig:curves} help to explain this ranking, because each model behaved differently during training. E1 kept improving slowly until about epoch 33, and its training and validation curves stayed close together throughout; it was not overfitting but simply lacked capacity. E2 showed the opposite pattern towards the end. After roughly epoch 30 its training loss kept falling, to 0.49 at the end, while the validation loss stayed around 0.64. This mild overfit did no harm, since we keep the epoch with the best validation score anyway.
+
+E3 gave the most telling result. With only the new head trained, stage A already reached 0.810, which is more than our best model trained from scratch. Fine-tuning in stage B then raised the score to 0.879. By the end of stage B, however, the training accuracy was close to 100\,\% (training loss 0.02 against 0.42 on validation), so longer training would not have helped.
 
 \begin{figure}[H]
 \centering
@@ -562,15 +560,9 @@ The training curves (Figure~\ref{fig:curves}) explain part of this ranking. E1 k
 \label{fig:curves}
 \end{figure}
 
-\subsection{4. Augmentation Ablation (RQ4)}
+\subsection{4. Error Analysis}
 
-The ablation result goes against the usual expectation. Without augmentation, the multi-scale CNN (E4) reached 0.808 validation macro-F1, slightly more than the 0.787 of the same model with augmentation (E2). We do not think this shows that augmentation hurts. The gap is 0.021 from a single run of each model, and the validation macro-F1 of one model often moved by up to 0.04 from one epoch to the next. The loss curves tell a clearer story: without augmentation the training loss fell to about 0.22 while the validation loss stayed near 0.57, whereas with augmentation the two stayed much closer (0.49 and 0.64). Augmentation clearly regularised the model; it just did not turn this into a better score within 40 epochs.
-
-We can think of three reasons, none of which we tested. The photos are already very uniform (same camera angle, same floor, centred objects), so random crops and rotations add variety that the test images do not have. Colour jitter may blur colour differences that matter for classes such as Cardboard or Vegetation. And augmented training usually needs more epochs than we gave it. \todo{compare E2 and E4 on the test set, keeping in mind that E4 has one run.}
-
-\subsection{5. Error Analysis}
-
-Looking at the validation errors, one pattern stood out for every model: when unsure, the models tended to answer ``Plastic''. For E1 this was extreme. It predicted Plastic for 249 validation images, of which only 116 really were Plastic, so 54\,\% of all its errors were wrong Plastic predictions. The share dropped to 33\,\% for E2 and 31\,\% for E3. Plastic is the largest class and includes almost every shape, colour and degree of shine, which probably makes it the safest guess for a model that has not learned the other classes well. Table~\ref{tab:conf} lists the most common confusions.
+On the validation set, every model tended to fall back on Plastic when it was unsure, and the smaller the model, the stronger this habit. E1 predicted Plastic for 249 validation images, of which only 116 really were Plastic, so 54\,\% of all its errors were wrong Plastic predictions. This share dropped to 33\,\% for E2 and 31\,\% for E3. Plastic is the largest class and covers almost every shape, colour and degree of shine, which probably makes it the safest guess for a model that has not yet learned the other classes well. Table~\ref{tab:conf} lists the most frequent confusions of each model.
 
 \begin{table}[H]
 \centering
@@ -587,30 +579,28 @@ E3 & Miscellaneous $\to$ Plastic 9, Glass $\to$ Plastic 8, Metal $\to$ Plastic 6
 \end{tabularx}
 \end{table}
 
-The two hardest classes were Miscellaneous Trash and Textile Trash. E1 found only 30\,\% and 29\,\% of them. E2 found 70\,\% and 51\,\%, and E3 71\,\% and 82\,\%. Both classes are collections of very different objects rather than one material, and Textile Trash is also the smallest class, so these numbers are not surprising.
+The two classes that all models found hardest were Miscellaneous Trash and Textile Trash. E1 recognised only 30\,\% and 29\,\% of their images, E2 70\,\% and 51\,\%, and E3 71\,\% and 82\,\%. Both classes are collections of very different objects rather than one material, and Textile Trash is also the smallest class, so their low recall is not surprising.
 
-\todo{test error analysis: take the model with the best mean validation macro-F1, open its \texttt{errors.csv}, describe the failure modes of 50 to 100 misclassified test images grouped by confusion pair, and add a figure with example errors.}
+\todo{test error analysis: take the model with the best mean validation macro-F1, describe the failure modes of its misclassified test images grouped by confusion pair, and add a figure with example errors.}
 
 % ------------------------------------------------------------------ V
 \section{V. Conclusion}
 
 \todo{the findings below come from validation. Replace each number with the test mean $\pm$ SD and keep a finding only if the test results still support it.}
 
-The fine-tuned EfficientNet-B0 (E3) was clearly our best model, with a validation macro-F1 of 0.879, compared with 0.787 for our multi-scale CNN (E2) and 0.650 for the simple CNN (E1). Going back to the research questions:
+The fine-tuned EfficientNet-B0 (E3) was clearly the best of the three models, and the size of the gaps between them answers all three research questions. On the validation set E3 reached a macro-F1 of 0.879, compared with 0.787 for our multi-scale CNN (E2) and 0.650 for the simple CNN (E1).
 
-\textbf{RQ1.} A three-block CNN trained from scratch reaches a macro-F1 of 0.650. It does not overfit, yet it misses most Textile Trash and Miscellaneous Trash items, which suggests that it is too small for the task rather than short of data.
+\textbf{RQ1.} A simple CNN trained from scratch is too small for this task. It reaches a macro-F1 of 0.650 without overfitting, yet it misses most Textile Trash and Miscellaneous Trash items, which points to a lack of capacity rather than a lack of data.
 
-\textbf{RQ2.} The multi-scale CNN improves macro-F1 by 0.137 and recovers much of the two hard classes. As E2 is also deeper and wider than E1, we credit this gain to the design as a whole.
+\textbf{RQ2.} The multi-scale CNN is a clear improvement over the simple one. It raises macro-F1 by 0.137 and recovers much of the two hard classes. Since E2 is also deeper and wider than E1, however, we credit this gain to the design as a whole rather than to the multi-scale branches alone.
 
-\textbf{RQ3.} ImageNet pretraining adds about 0.09 macro-F1 on top of E2. The most telling result is that the frozen pretrained features with only a new head (0.810) already beat both models trained from scratch.
+\textbf{RQ3.} ImageNet pretraining helps more than any architecture we designed ourselves. It adds about 0.09 macro-F1 on top of E2, and even the frozen pretrained features with only a new head (0.810) beat both models trained from scratch.
 
-\textbf{RQ4.} Removing augmentation changed validation macro-F1 by $+0.021$, which is within the noise of a single run. Augmentation did narrow the gap between training and validation loss, but our experiment cannot show that it changes accuracy.
+The errors that remain follow a common pattern across the models. They mostly confuse materials that look alike, such as glass, metal and plastic, or cardboard and plastic, they fall back on Plastic when unsure, and they struggle with the two mixed classes.
 
-The errors that remain are mostly confusions between materials that look alike (glass, metal and plastic; cardboard and plastic), Plastic used as a fallback answer, and the two mixed classes.
+These results come with several limitations. First, photos of one object can still end up in different subsets when they straddle a block boundary or are far apart in numbering, so the test scores may be slightly optimistic. Second, we did not search for better hyperparameters, and E1 in particular might do better with other settings. Third, the standard deviation over three seeds covers training randomness only, since all runs share one split. Our comparisons also change more than one factor at a time: E2 differs from E1 in several ways, and E3 differs from both in pretraining and schedule. Finally, all images come from one setup with the same floor and camera angle, so accuracy on photos taken elsewhere, for example on a real sorting line, is likely to be lower.
 
-The study has clear limitations. Photos of one object can still end up in different subsets when they straddle a block boundary or are far apart in numbering, so the test scores may be a little optimistic. We did not search for better hyperparameters, and E1 in particular might do better with other settings. The SD over three seeds only covers training randomness: all runs share one split, and E4 was run only once. Our comparisons also change more than one thing at a time, since E2 differs from E1 in several ways and E3 differs from both in pretraining and schedule. Last, all images come from one setup with the same floor and camera angle, and we expect lower accuracy on photos taken elsewhere, for example on a real sorting line.
-
-For a practical system with a small labelled dataset, our results point towards starting from a pretrained network rather than designing a CNN from scratch: in our tests it was the most accurate model and needed only 25 epochs. Before using it in the field, though, it would have to be trained and tested on images from the place where it will run.
+For a practical sorting system with a small labelled dataset, our results favour starting from a pretrained network over designing a CNN from scratch. In our tests the pretrained model was the most accurate of the three and needed only 25 epochs to train. Before it could be used in the field, however, it would have to be retrained and tested on images from the place where it will run.
 
 % ------------------------------------------------------------------ references
 \begin{thebibliography}{99}
